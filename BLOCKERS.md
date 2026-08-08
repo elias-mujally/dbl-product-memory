@@ -1,31 +1,10 @@
 # العوائق الحالية
 
-آخر تحديث: 2026-08-05
+آخر تحديث: 2026-08-08
 
-## 1. Codex external-command limit
+## 1. Meta Business Verification
 
-**الحالة:** Blocking مؤقتًا لـPR #35.
-
-**الوضع:**
-
-- تم تنفيذ آخر إصلاح محليًا.
-- تعذر commit/push لأن بوابة الأوامر الخارجية وصلت حد الاستخدام.
-- يتجدد الحد بعد نحو أسبوع من تاريخ التوقف.
-
-**لا يوجد حل آمن بديل مطلوب الآن.**
-
-**عند التجدد:**
-
-- commit + push للملفين المحليين.
-- CI.
-- final review.
-- merge إذا كانت النتائج خضراء.
-
----
-
-## 2. Meta Business Verification
-
-**الحالة:** Pending / In progress.
+**الحالة:** Pending / In progress لأكثر من أسبوع.
 
 **الأثر:**
 
@@ -38,15 +17,15 @@
 
 **المطلوب:**
 
-انتظار Meta، وعدم الضغط على resend إلا عند وجود دليل أن الطلب عالق أو طلب Meta ذلك.
+انتظار Meta، وعدم الضغط على resend إلا عند وجود دليل أن الطلب عالق أو طلب Meta ذلك. إذا تجاوز الانتظار مدة طويلة إضافية بلا Required Actions، فالتصعيد إلى Meta Business Support يصبح منطقيًا.
 
 ---
 
-## 3. Tech Provider qualification
+## 2. Tech Provider qualification
 
-**الحالة:** بدأ، 0/2 عند آخر تحقق، ومتوقف على Business Verification.
+**الحالة:** بدأ، لكنه متوقف على Business Verification.
 
-**لاحقًا:**
+**لاحقًا بعد التحقق:**
 
 - مراجعة app settings.
 - screencasts.
@@ -55,7 +34,7 @@
 
 ---
 
-## 4. WhatsApp Advanced Access
+## 3. WhatsApp Advanced Access
 
 **غير مكتمل:**
 
@@ -70,7 +49,7 @@ Admin/developer testing قد يعمل ضمن حدود، لكن external customer
 
 ---
 
-## 5. Embedded Signup FINISH/asset event
+## 4. Embedded Signup FINISH/asset event
 
 **الحالة:** غير محسومة نهائيًا بعد config الجديد.
 
@@ -84,6 +63,25 @@ Admin/developer testing قد يعمل ضمن حدود، لكن external customer
 **بعد Meta approval:**
 
 إعادة اختبار المسار الكامل حتى Complete/FINISH، ثم backend exchange والتفعيل.
+
+---
+
+## 5. Vercel Meta/WhatsApp environment audit
+
+Google Cloud وSecret Manager وحساب الخدمة والصلاحيات جاهزة مسبقًا.
+
+المتبقي هو التأكد من متغيرات الإنتاج/Preview في Vercel، خصوصًا:
+
+- `META_EMBEDDED_SIGNUP_CONFIG_ID`
+- `META_APP_ID`
+- `META_APP_SECRET`
+- `WHATSAPP_PROVIDER=meta`
+- `WHATSAPP_GRAPH_API_VERSION=v25.0`
+- `WHATSAPP_CREDENTIAL_STORE=gcp_secret_manager`
+- `WHATSAPP_SECRET_MANAGER_PROJECT`
+- `WHATSAPP_VERIFY_TOKEN`
+
+هذا تدقيق إعدادات، وليس سببًا لإعادة بناء Google Cloud.
 
 ---
 
@@ -154,4 +152,19 @@ Gumroad حل مؤقت خارج التطبيق، وليس architecture نهائي
 - Appearance & Language settings.
 - Privacy & Legal inside AppShell.
 
-هذه ليست blockers لـPR #35، لكنها blockers لتجربة SaaS كاملة وجاهزة للبيع.
+هذه ليست blockers للإنتاج الحالي، لكنها أجزاء مهمة للوصول إلى تجربة SaaS أوسع وجاهزة للبيع.
+
+---
+
+## مغلق: PR #35 / Codex limit
+
+العائق السابق الخاص بحد Codex وPR #35 أُغلق بالكامل:
+
+- عاد Codex.
+- تم دفع الإصلاحات.
+- اجتاز PR #35 المراجعات النهائية دون High/Medium.
+- تم squash merge إلى `main` عند SHA `b14c1fe2e144cb58cd0618501abe3f10c5a88494`.
+- migration الإنتاجية طُبقت بنجاح مرة واحدة.
+- Vercel production أصبح READY.
+
+لا يُعامل PR #35 كعائق حالي بعد الآن.
