@@ -2,6 +2,40 @@
 
 > التواريخ أدناه تسجل مراحل المنتج الأساسية، وليست كل commit صغير.
 
+## 2026-08-08
+
+### استئناف PR #35 بعد عودة Codex
+
+- عاد Codex بعد توقف الحصة السابقة.
+- تم دفع آخر إصلاح محلي كان عالقًا في:
+  - `components/knowledge-task-form-actions.tsx`
+  - `tests/e2e/knowledge-idempotency.spec.ts`
+- تم تثبيت السلوك الصحيح لـ“Save and add another”:
+  - عملية جديدة فعلًا تحصل على idempotency key جديد.
+  - retry أو النقر المكرر لنفس العملية يحتفظ بالمفتاح نفسه.
+- الرأس الجديد لـPR #35 أصبح:
+  - `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
+- التحقق النهائي:
+  - focused tests 13/13
+  - Vitest 423/423
+  - Foundation CI passed
+  - Supabase reset passed
+  - pgTAP passed
+  - Authenticated E2E passed
+  - Vercel Preview Ready
+- المراجعة الذاتية الحالية:
+  - High: none
+  - Medium: none
+  - readiness: 99/100
+- PR #35 ما زال Draft وغير مدمج بانتظار مراجعة مستقلة نهائية ثم squash merge إذا بقي نظيفًا.
+
+### Meta / Google Cloud
+
+- Business Verification لدى Meta ما زالت Pending/In progress لأكثر من أسبوع.
+- تم التأكيد أن Google Cloud وSecret Manager وحساب الخدمة والصلاحيات اللازمة لتخزين أسرار WhatsApp قد جُهزت سابقًا بالكامل.
+- `GOOGLE_SERVICE_ACCOUNT_JSON` موجود على Vercel.
+- لا حاجة لإعادة إنشاء بنية Google Cloud؛ المتبقي فقط تدقيق متغيرات Meta/WhatsApp في Vercel عند الحاجة.
+
 ## 2026-08-05
 
 - إنشاء مستودع `dbl-product-memory` كذاكرة مؤسسية مستقلة للمشروع.
