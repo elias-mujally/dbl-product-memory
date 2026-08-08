@@ -22,18 +22,19 @@ DBL Employee AI أصبح تطبيق SaaS فعلي متعدد المستأجري�
 
 ## أين توقفنا بالضبط؟
 
-### PR الحالي
+### PR #35 تم دمجه وإطلاقه
 
-PR المفتوح: **#35 — fix: clarify internal knowledge approval workflow**
+PR: **#35 — fix: clarify internal knowledge approval workflow**
 
-- الحالة: Draft، غير مدمج، قابل للدمج.
-- الفرع: `codex/knowledge-internal-approval-ux`
-- الرأس الحالي بعد آخر إصلاحين: `f09dc02e54a2c3a97805df4400bfc1b81a40826a`
-- جميع الفحوص المطلوبة خضراء على هذا الرأس.
-- المراجعة الذاتية الحالية: لا High ولا Medium findings.
-- **ما زالت مطلوبة مراجعة مستقلة نهائية قصيرة على الإصلاحين الأخيرين قبل الدمج.**
+- الحالة: **MERGED via squash**.
+- الرأس الذي اجتاز المراجعة النهائية: `f09dc02e54a2c3a97805df4400bfc1b81a40826a`
+- Squash/main SHA: `b14c1fe2e144cb58cd0618501abe3f10c5a88494`
+- Vercel deployment: `dpl_3ffgPf2G7fFr6Jb92TcU2wo7R7Q8`
+- Production status: **READY**
+- Production URL: `https://dbl-employee-ai.vercel.app`
+- لا توجد regressions أو runtime error clusters أو 5xx مرتبطة بالإصدار الجديد.
 
-PR #35 يضيف ويثبت:
+PR #35 أضاف وثبّت:
 
 - توضيح أن المراجعة داخل Workspace العميل وليست بواسطة DBL.
 - Owner/Admin: حفظ مسودة أو إتاحة للموظف الذكي.
@@ -41,13 +42,15 @@ PR #35 يضيف ويثبت:
 - Viewer: قراءة فقط.
 - Review queue للمالك والمدير.
 - create idempotency دائم على مستوى قاعدة البيانات.
-- partial-failure recovery إذا نجح الحفظ وفشل الاعتماد.
 - pending-state UX لمنع النقرات المتكررة.
+- partial-failure recovery إذا نجح الحفظ وفشل الاعتماد.
+- reconciliation لحالات approval commit + lost response.
+- session-scoped create-attempt UUID يمنع duplicates عبر reload/remount/retry.
 - role-boundary coverage واختبارات E2E.
 
-### idempotency النهائية
+### idempotency الإنتاجية
 
-الهجرة المعتمدة داخل PR #35:
+الهجرة التي تم تطبيقها إنتاجيًا:
 
 - `20260802172230_knowledge_create_idempotency.sql`
 - جدول داخلي: `knowledge_source_create_requests`
@@ -59,40 +62,43 @@ PR #35 يضيف ويثبت:
 - الحجز الذري + unique constraint + `SELECT ... FOR UPDATE` للتزامن.
 - retry لنفس العملية يعيد نفس source ID بدل إنشاء سجل جديد.
 
-### آخر إصلاحين بعد المراجعة المستقلة
+تم التحقق بعد الدمج من أن:
 
-المراجعة المستقلة للرأس السابق `c0421c86bcd2ca87c0ff338a3de77256d061d0e1` وجدت مشكلتين Medium:
+- migration history يحتوي صفًا واحدًا فقط للهجرة.
+- الجدول وRPC موجودان.
+- RLS وFORCE RLS مفعّلان.
+- browser roles لا تملك direct table grants.
+- `authenticated` يستطيع تنفيذ RPC الجديد.
+- `authenticated` لا يستطيع تنفيذ legacy creation RPC.
+- لم تُنشأ Knowledge أو idempotency test records في الإنتاج.
 
-1. إذا نجح `approve_knowledge_source` فعليًا لكن ضاعت الاستجابة أو انتهت المهلة، كانت الواجهة قد تعرض أن الاعتماد فشل وأن العنصر ما زال Draft رغم أنه أصبح Approved وAI-usable.
-2. مفتاح idempotency كان mount-local؛ فإذا نجح الإنشاء وضاعت الاستجابة ثم حدث remount/reload، يمكن أن يتولد مفتاح جديد ويؤدي retry إلى duplicate.
+### آخر مشكلتين تم إغلاقهما قبل الدمج
 
-تم إصلاحهما في الرأس الحالي `f09dc02e54a2c3a97805df4400bfc1b81a40826a`:
+المراجعة النهائية وجدت مشكلتين Medium ثم تم إغلاقهما بالكامل:
 
-- بعد أي خطأ في الاعتماد، يجري الخادم authoritative reconciliation لنفس `source_id`:
-  - إذا كان Approved وAI-approved → `made_available`.
-  - إذا بقي غير معتمد → `approval_failed_draft_saved`.
-  - إذا تعذر تحديد الحالة → `approval_status_unknown` مع رسالة عربية/إنجليزية صريحة لا تدّعي النجاح أو الفشل النهائي.
-- مفتاح create-attempt أصبح محفوظًا في `sessionStorage` ومحدد النطاق بواسطة hashes معتمة للـworkspace/user/form flow.
-- يبقى المفتاح نفسه عبر rerender/remount/reload/double-click/transport retry.
-- يتم مسحه أو تدويره فقط بعد terminal result مؤكد أو عند بدء عنصر جديد مقصود.
-- “Save and add another” يولد مفتاحًا جديدًا للعنصر التالي.
-- fingerprint conflict لا يُحل بتوليد duplicate؛ بل يتطلب إجراء صريح “Start a new item”.
-- لا يتم تخزين Knowledge content أو customer data أو secrets في browser storage، فقط UUID للمحاولة.
+1. **Approval committed + response lost**
+   - أصبح الخادم يعيد قراءة نفس `source_id` authoritative بعد خطأ الاعتماد.
+   - Approved + AI-approved → `made_available`.
+   - Confirmed unapproved → `approval_failed_draft_saved`.
+   - Unknown state → `approval_status_unknown` دون ادعاء كاذب.
 
-التحقق على الرأس الحالي:
+2. **Create committed + response lost + reload/remount**
+   - create-attempt UUID أصبح محفوظًا في `sessionStorage`.
+   - يبقى نفسه عبر rerender/remount/reload/double-click/transport retry.
+   - Save and add another يولد مفتاحًا جديدًا للعملية الجديدة.
+   - stale key + different fingerprint يفشل بأمان ويتطلب “Start a new item”.
+   - قاعدة البيانات تبقى الضمان النهائي ضد duplicates.
 
-- Prettier: passed
-- lint: passed
-- typecheck: passed
-- Vitest: 431/431 passed عبر 33 ملفًا
-- production build: passed
-- git diff --check: passed
-- secret/PII scan: passed
-- Foundation CI: passed
-- Supabase reset: passed في CI
-- pgTAP: passed في CI
-- Authenticated E2E: 12/12 passed
-- Vercel Preview: Ready
+التحقق على الرأس الذي تم دمجه:
+
+- Vitest: 431/431 passed عبر 33 ملفًا.
+- Authenticated E2E: 12/12 passed.
+- Foundation CI: passed.
+- Supabase reset: passed.
+- pgTAP: passed.
+- Production build: passed.
+- Vercel Preview: Ready قبل الدمج.
+- Final independent review: لا High ولا Medium findings.
 
 ## Meta / WhatsApp
 
@@ -122,7 +128,9 @@ PR #35 يضيف ويثبت:
 ## الإنتاج
 
 - الإنتاج الحالي: `https://dbl-employee-ai.vercel.app`
+- `main`: `b14c1fe2e144cb58cd0618501abe3f10c5a88494`
 - آخر Knowledge UX المدموج: PR #34
+- آخر Knowledge approval/idempotency المدموج: PR #35
 - Knowledge Hub الحالي يتضمن:
   - Business information
   - Products/services
@@ -135,26 +143,28 @@ PR #35 يضيف ويثبت:
 
 ## الخطوة التالية حرفيًا
 
-1. إجراء **مراجعة مستقلة نهائية مركزة فقط** على الإصلاحين الأخيرين في الرأس:
-   `f09dc02e54a2c3a97805df4400bfc1b81a40826a`
-2. المراجعة يجب أن تتحقق من:
-   - approval committed + response lost → reconciliation يعرض الحالة الصحيحة.
-   - genuine approval failure → يبقى unapproved مع partial-success recovery صحيح.
-   - reconciliation ambiguity → `approval_status_unknown` دون ادعاء كاذب.
-   - create commit + response lost + remount/reload + retry → مصدر واحد فقط.
-   - sessionStorage key lifecycle وعدم تدويره في retry.
-   - Save and add another → مفتاح جديد وعملية جديدة فعلًا.
-   - stale key + different fingerprint → رفض آمن وإجراء Start a new item.
-3. إذا لم تظهر High أو Medium findings على الرأس نفسه، تحويل PR #35 إلى Ready for Review ثم squash merge.
-4. انتظار Vercel Production حتى READY.
-5. تنفيذ production smoke verification دون كتابة بيانات اختبار خطرة.
-6. تحديث هذه الذاكرة فور الدمج أو ظهور blocker جديد.
+PR #35 مغلق ومكتمل. الخطوة التالية يجب أن تبدأ من `main` الحالي فقط.
+
+الأولوية القادمة قبل توسيع الميزات:
+
+1. تدقيق متغيرات Meta/WhatsApp في Vercel Production/Preview:
+   - `META_EMBEDDED_SIGNUP_CONFIG_ID`
+   - `META_APP_ID`
+   - `META_APP_SECRET`
+   - `WHATSAPP_PROVIDER=meta`
+   - `WHATSAPP_GRAPH_API_VERSION=v25.0`
+   - `WHATSAPP_CREDENTIAL_STORE=gcp_secret_manager`
+   - `WHATSAPP_SECRET_MANAGER_PROJECT`
+   - `WHATSAPP_VERIFY_TOKEN`
+2. عدم إعادة إنشاء Google Cloud؛ البنية موجودة بالفعل.
+3. متابعة Meta Business Verification وعدم افتراض اكتمالها حتى يظهر ذلك فعليًا.
+4. عند اكتمال Business Verification، استكمال Tech Provider qualification ثم App Review وAdvanced Access.
+5. قبل أي feature PR جديد، اقرأ `AI_HANDOFF.md` و`VISION.md` و`ROADMAP.md` لتحديد الأولوية التالية ضمن الرؤية.
 
 ## لا تفعل الآن
 
-- لا تدمج PR #35 قبل المراجعة المستقلة الأخيرة على الرأس `f09dc...`.
-- لا تعيد تصميم idempotency.
-- لا تنشئ PR بديل لنفس التغيير.
-- لا تغيّر schema أو RPC إضافيًا دون blocker مثبت.
-- لا تغيّر Meta أو WhatsApp أو AI behavior أثناء إنهاء PR #35.
+- لا تعيد فتح أو إعادة تصميم PR #35.
+- لا تنشئ migration أو RPC إضافيًا لنفس idempotency دون blocker جديد مثبت.
+- لا تغيّر Google Cloud من الصفر؛ Secret Manager والصلاحيات جاهزة.
 - لا تفترض أن Business Verification اكتمل حتى يظهر ذلك فعليًا في Meta.
+- لا تختبر failure/concurrency production writes إذا كانت الاختبارات المعزولة تكفي.
