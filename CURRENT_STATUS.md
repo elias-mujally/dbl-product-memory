@@ -28,11 +28,10 @@ PR المفتوح: **#35 — fix: clarify internal knowledge approval workflow**
 
 - الحالة: Draft، غير مدمج، قابل للدمج.
 - الفرع: `codex/knowledge-internal-approval-ux`
-- الرأس النهائي الحالي: `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
-- جميع الفحوص النهائية خضراء.
-- درجة الجاهزية الحالية: **99/100**.
-- لا توجد High findings.
-- لا توجد Medium findings.
+- الرأس الحالي بعد آخر إصلاحين: `f09dc02e54a2c3a97805df4400bfc1b81a40826a`
+- جميع الفحوص المطلوبة خضراء على هذا الرأس.
+- المراجعة الذاتية الحالية: لا High ولا Medium findings.
+- **ما زالت مطلوبة مراجعة مستقلة نهائية قصيرة على الإصلاحين الأخيرين قبل الدمج.**
 
 PR #35 يضيف ويثبت:
 
@@ -60,33 +59,39 @@ PR #35 يضيف ويثبت:
 - الحجز الذري + unique constraint + `SELECT ... FOR UPDATE` للتزامن.
 - retry لنفس العملية يعيد نفس source ID بدل إنشاء سجل جديد.
 
-### آخر إصلاح كان متوقفًا ثم اكتمل
+### آخر إصلاحين بعد المراجعة المستقلة
 
-الإصلاح الذي كان محليًا فقط بسبب حد Codex تم دفعه واختباره الآن.
+المراجعة المستقلة للرأس السابق `c0421c86bcd2ca87c0ff338a3de77256d061d0e1` وجدت مشكلتين Medium:
 
-الملفان:
+1. إذا نجح `approve_knowledge_source` فعليًا لكن ضاعت الاستجابة أو انتهت المهلة، كانت الواجهة قد تعرض أن الاعتماد فشل وأن العنصر ما زال Draft رغم أنه أصبح Approved وAI-usable.
+2. مفتاح idempotency كان mount-local؛ فإذا نجح الإنشاء وضاعت الاستجابة ثم حدث remount/reload، يمكن أن يتولد مفتاح جديد ويؤدي retry إلى duplicate.
 
-- `components/knowledge-task-form-actions.tsx`
-- `tests/e2e/knowledge-idempotency.spec.ts`
+تم إصلاحهما في الرأس الحالي `f09dc02e54a2c3a97805df4400bfc1b81a40826a`:
 
-السلوك النهائي:
+- بعد أي خطأ في الاعتماد، يجري الخادم authoritative reconciliation لنفس `source_id`:
+  - إذا كان Approved وAI-approved → `made_available`.
+  - إذا بقي غير معتمد → `approval_failed_draft_saved`.
+  - إذا تعذر تحديد الحالة → `approval_status_unknown` مع رسالة عربية/إنجليزية صريحة لا تدّعي النجاح أو الفشل النهائي.
+- مفتاح create-attempt أصبح محفوظًا في `sessionStorage` ومحدد النطاق بواسطة hashes معتمة للـworkspace/user/form flow.
+- يبقى المفتاح نفسه عبر rerender/remount/reload/double-click/transport retry.
+- يتم مسحه أو تدويره فقط بعد terminal result مؤكد أو عند بدء عنصر جديد مقصود.
+- “Save and add another” يولد مفتاحًا جديدًا للعنصر التالي.
+- fingerprint conflict لا يُحل بتوليد duplicate؛ بل يتطلب إجراء صريح “Start a new item”.
+- لا يتم تخزين Knowledge content أو customer data أو secrets في browser storage، فقط UUID للمحاولة.
 
-- “Save and add another” يجهز idempotency key جديدًا لعملية إنشاء جديدة فعلًا.
-- retry أو النقر المكرر لنفس العملية يحتفظ بالمفتاح نفسه.
-- الاختبار يثبت أن عمليتين مقصودتين منفصلتين تنشئان مصدرين مختلفين، دون duplicate داخل العملية نفسها.
-
-التحقق:
+التحقق على الرأس الحالي:
 
 - Prettier: passed
 - lint: passed
 - typecheck: passed
-- focused tests: 13/13 passed
-- Vitest: 423/423 passed
+- Vitest: 431/431 passed عبر 33 ملفًا
+- production build: passed
 - git diff --check: passed
+- secret/PII scan: passed
 - Foundation CI: passed
-- Supabase reset: passed
-- pgTAP: passed
-- Authenticated E2E: passed
+- Supabase reset: passed في CI
+- pgTAP: passed في CI
+- Authenticated E2E: 12/12 passed
 - Vercel Preview: Ready
 
 ## Meta / WhatsApp
@@ -130,21 +135,24 @@ PR #35 يضيف ويثبت:
 
 ## الخطوة التالية حرفيًا
 
-1. إجراء **مراجعة مستقلة نهائية واحدة** لـPR #35 على الرأس:
-   `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
-2. التأكد أن المراجعة لا تجد High أو Medium findings.
-3. إذا بقيت الفحوص خضراء، تنفيذ squash merge لـPR #35.
+1. إجراء **مراجعة مستقلة نهائية مركزة فقط** على الإصلاحين الأخيرين في الرأس:
+   `f09dc02e54a2c3a97805df4400bfc1b81a40826a`
+2. المراجعة يجب أن تتحقق من:
+   - approval committed + response lost → reconciliation يعرض الحالة الصحيحة.
+   - genuine approval failure → يبقى unapproved مع partial-success recovery صحيح.
+   - reconciliation ambiguity → `approval_status_unknown` دون ادعاء كاذب.
+   - create commit + response lost + remount/reload + retry → مصدر واحد فقط.
+   - sessionStorage key lifecycle وعدم تدويره في retry.
+   - Save and add another → مفتاح جديد وعملية جديدة فعلًا.
+   - stale key + different fingerprint → رفض آمن وإجراء Start a new item.
+3. إذا لم تظهر High أو Medium findings على الرأس نفسه، تحويل PR #35 إلى Ready for Review ثم squash merge.
 4. انتظار Vercel Production حتى READY.
-5. التحقق إنتاجيًا دون بيانات اختبار حقيقية من:
-   - approval UX حسب الدور
-   - review queue
-   - partial-failure wording
-   - عدم وجود runtime errors أو 5xx
-6. عدم تجربة duplicate production writes إذا كان يمكن الاعتماد على synthetic E2E/database coverage.
-7. تحديث ذاكرة المشروع فور الدمج أو عند ظهور blocker جديد.
+5. تنفيذ production smoke verification دون كتابة بيانات اختبار خطرة.
+6. تحديث هذه الذاكرة فور الدمج أو ظهور blocker جديد.
 
 ## لا تفعل الآن
 
+- لا تدمج PR #35 قبل المراجعة المستقلة الأخيرة على الرأس `f09dc...`.
 - لا تعيد تصميم idempotency.
 - لا تنشئ PR بديل لنفس التغيير.
 - لا تغيّر schema أو RPC إضافيًا دون blocker مثبت.
