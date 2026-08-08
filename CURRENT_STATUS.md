@@ -1,12 +1,12 @@
 # الحالة الحالية
 
-آخر تحديث: **2026-08-05**
+آخر تحديث: **2026-08-08**
 
 ## ملخص سريع
 
-DBL Employee AI أصبح تطبيق SaaS فعلي متعدد المستأجرين، بواجهة ثنائية اللغة جزئيًا، ونظام معرفة منظم، وذكاء اصطناعي مؤسس على معرفة معتمدة، وتكامل WhatsApp قيد إكمال متطلبات Meta.
+DBL Employee AI أصبح تطبيق SaaS فعلي متعدد المستأجرين، بواجهة عربية/إنجليزية، ونظام معرفة منظم، وذكاء اصطناعي مؤسس على معرفة معتمدة، وتكامل WhatsApp جاهز برمجيًا إلى حد كبير بينما تبقى بعض متطلبات Meta الخارجية قيد الانتظار.
 
-الحالة الحالية ليست Prototype بسيطًا. المنتج يملك بنية حقيقية تشمل:
+المنتج يملك بنية حقيقية تشمل:
 
 - Authentication وWorkspace onboarding.
 - RLS وعزل المستأجرين.
@@ -17,8 +17,8 @@ DBL Employee AI أصبح تطبيق SaaS فعلي متعدد المستأجري�
 - AI employee customization.
 - Meta Embedded Signup infrastructure.
 - صفحات قانونية عامة.
-- بنية localization وtheme.
-- Knowledge Hub جديد مبني حول تعليم الموظف الذكي.
+- localization وtheme foundation.
+- Knowledge Hub مبني حول تعليم الموظف الذكي.
 
 ## أين توقفنا بالضبط؟
 
@@ -26,61 +26,93 @@ DBL Employee AI أصبح تطبيق SaaS فعلي متعدد المستأجري�
 
 PR المفتوح: **#35 — fix: clarify internal knowledge approval workflow**
 
-- الحالة: Draft، غير مدمج.
+- الحالة: Draft، غير مدمج، قابل للدمج.
 - الفرع: `codex/knowledge-internal-approval-ux`
-- آخر رأس مدفوع إلى GitHub: `d79dc723f45499e4b14c93af60e645eff4a018d3`
-- كل فحوص الرأس المدفوع خضراء.
-- PR يضيف:
-  - توضيح أن المراجعة داخل Workspace العميل وليست بواسطة DBL.
-  - أدوار واضحة: Owner/Admin ينشران، Agent يرسل للمراجعة، Viewer قراءة فقط.
-  - Review queue داخل Knowledge Hub.
-  - idempotent Knowledge creation عبر migration وجدول داخلي وRPC جديد.
-  - recovery واضح إذا نجح الحفظ وفشل الاعتماد.
+- الرأس النهائي الحالي: `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
+- جميع الفحوص النهائية خضراء.
+- درجة الجاهزية الحالية: **99/100**.
+- لا توجد High findings.
+- لا توجد Medium findings.
 
-### الإصلاح المحلي غير المدفوع
+PR #35 يضيف ويثبت:
 
-هناك إصلاح أخير تم تنفيذه محليًا لكنه **لم يُدفع إلى GitHub** بسبب بلوغ حد Codex للأوامر ذات الصلاحيات الخارجية:
+- توضيح أن المراجعة داخل Workspace العميل وليست بواسطة DBL.
+- Owner/Admin: حفظ مسودة أو إتاحة للموظف الذكي.
+- Agent: حفظ مسودة أو إرسال للمالك/المدير للمراجعة.
+- Viewer: قراءة فقط.
+- Review queue للمالك والمدير.
+- create idempotency دائم على مستوى قاعدة البيانات.
+- partial-failure recovery إذا نجح الحفظ وفشل الاعتماد.
+- pending-state UX لمنع النقرات المتكررة.
+- role-boundary coverage واختبارات E2E.
+
+### idempotency النهائية
+
+الهجرة المعتمدة داخل PR #35:
+
+- `20260802172230_knowledge_create_idempotency.sql`
+- جدول داخلي: `knowledge_source_create_requests`
+- unique constraint: `(workspace_id, actor_user_id, idempotency_key)`
+- RPC جديد: `create_idempotent_knowledge_source(...)`
+- RLS + FORCE RLS.
+- `SECURITY DEFINER` مع `search_path=''`.
+- request fingerprint باستخدام SHA-256 للمدخلات الدلالية المطبعة.
+- الحجز الذري + unique constraint + `SELECT ... FOR UPDATE` للتزامن.
+- retry لنفس العملية يعيد نفس source ID بدل إنشاء سجل جديد.
+
+### آخر إصلاح كان متوقفًا ثم اكتمل
+
+الإصلاح الذي كان محليًا فقط بسبب حد Codex تم دفعه واختباره الآن.
+
+الملفان:
 
 - `components/knowledge-task-form-actions.tsx`
 - `tests/e2e/knowledge-idempotency.spec.ts`
 
-وظيفة الإصلاح:
+السلوك النهائي:
 
-- عند استخدام “Save and add another”، يجب توليد idempotency key جديد للعملية الجديدة.
-- يجب الاحتفاظ بنفس المفتاح فقط عند retry لنفس العملية.
-- أضيف اختبار E2E يثبت أن عمليتين مقصودتين منفصلتين تنشئان مصدرين، دون تكرار داخل العملية الواحدة.
+- “Save and add another” يجهز idempotency key جديدًا لعملية إنشاء جديدة فعلًا.
+- retry أو النقر المكرر لنفس العملية يحتفظ بالمفتاح نفسه.
+- الاختبار يثبت أن عمليتين مقصودتين منفصلتين تنشئان مصدرين مختلفين، دون duplicate داخل العملية نفسها.
 
-التحقق المحلي لهذا الإصلاح:
+التحقق:
 
 - Prettier: passed
 - lint: passed
 - typecheck: passed
+- focused tests: 13/13 passed
 - Vitest: 423/423 passed
 - git diff --check: passed
-
-لكن لا يجب دمج PR #35 قبل:
-
-1. دفع الملفين.
-2. تشغيل CI على الرأس الجديد.
-3. مراجعة مستقلة أخيرة.
-4. التأكد أنه لا توجد High/Medium findings.
-5. squash merge.
+- Foundation CI: passed
+- Supabase reset: passed
+- pgTAP: passed
+- Authenticated E2E: passed
+- Vercel Preview: Ready
 
 ## Meta / WhatsApp
 
 ### الحالة
 
-- تم إنشاء Meta Embedded Signup configuration صحيح ينتهي بـ`1674`.
+- تم إنشاء Meta Embedded Signup configuration الصحيح المنتهي بـ`1674`.
 - التكوين القديم المنتهي بـ`3161` كان incomplete/general وأعاد ordinary Facebook Login.
-- التكوين الجديد يعيد authorization code كما هو متوقع.
-- Business Verification لدى Meta ما زالت Pending/In progress.
+- التكوين الجديد أعاد authorization code كما هو متوقع.
+- Business Verification لدى Meta ما زالت Pending/In progress لأكثر من أسبوع.
 - بدأ التأهيل كـ Independent Tech Provider.
-- Tech Provider qualification متوقف عند Business Verification.
-- Advanced Access وApp Review لم يكتملوا.
+- Tech Provider qualification متوقف على Business Verification.
+- Advanced Access وApp Review لم يكتملوا بعد.
 
-### أهم استنتاج
+### Google Cloud / Secret Manager
 
-المشكلة الأصلية في Embedded Signup لم تكن من DBL فقط. تم إثبات ذلك عبر صفحة minimal مستقلة لا تستخدم Next.js أو React أو Supabase، وأعادت نفس ordinary login behavior مع التكوين القديم. بعد إنشاء config صحيح، عاد authorization code.
+تم تجهيز Google Cloud سابقًا بالكامل لتخزين بيانات WhatsApp السرية:
+
+- مشروع Google Cloud وإعداداته جاهزة.
+- Secret Manager جاهز.
+- حساب الخدمة موجود.
+- الصلاحيات المطلوبة مُنحت.
+- `GOOGLE_SERVICE_ACCOUNT_JSON` موجود على Vercel.
+- تم تنفيذ إعادة نشر بعد إعداد Google Cloud سابقًا.
+
+المطلوب عند تدقيق Vercel هو التأكد فقط من متغيرات Meta/WhatsApp الإنتاجية وعدم إعادة بناء Google Cloud من الصفر.
 
 ## الإنتاج
 
@@ -98,25 +130,23 @@ PR المفتوح: **#35 — fix: clarify internal knowledge approval workflow**
 
 ## الخطوة التالية حرفيًا
 
-عند عودة قدرة Codex على الأوامر الخارجية:
-
-1. فتح checkout الحالي لـPR #35.
-2. عرض diff للملفين المحليين فقط.
-3. إعادة التحقق.
-4. commit + push.
-5. انتظار GitHub CI وSupabase/pgTAP وE2E وVercel Preview.
-6. مراجعة مستقلة نهائية.
-7. إذا لم توجد موانع، squash merge.
-8. تحقق إنتاجي من:
-   - منع duplicates
-   - partial approval failure recovery
-   - role matrix
+1. إجراء **مراجعة مستقلة نهائية واحدة** لـPR #35 على الرأس:
+   `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
+2. التأكد أن المراجعة لا تجد High أو Medium findings.
+3. إذا بقيت الفحوص خضراء، تنفيذ squash merge لـPR #35.
+4. انتظار Vercel Production حتى READY.
+5. التحقق إنتاجيًا دون بيانات اختبار حقيقية من:
+   - approval UX حسب الدور
    - review queue
+   - partial-failure wording
+   - عدم وجود runtime errors أو 5xx
+6. عدم تجربة duplicate production writes إذا كان يمكن الاعتماد على synthetic E2E/database coverage.
+7. تحديث ذاكرة المشروع فور الدمج أو عند ظهور blocker جديد.
 
 ## لا تفعل الآن
 
-- لا تدمج PR #35 على الرأس الحالي.
-- لا تنشئ PR بديل لنفس التغيير.
 - لا تعيد تصميم idempotency.
-- لا تغيّر Meta أو WhatsApp أو production data.
-- لا تستخدم client-only lock كضمان وحيد ضد التكرار.
+- لا تنشئ PR بديل لنفس التغيير.
+- لا تغيّر schema أو RPC إضافيًا دون blocker مثبت.
+- لا تغيّر Meta أو WhatsApp أو AI behavior أثناء إنهاء PR #35.
+- لا تفترض أن Business Verification اكتمل حتى يظهر ذلك فعليًا في Meta.
