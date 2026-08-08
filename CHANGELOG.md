@@ -4,6 +4,52 @@
 
 ## 2026-08-08
 
+### دمج PR #35 وإطلاق approval/idempotency الجديد
+
+- اجتاز الرأس `f09dc02e54a2c3a97805df4400bfc1b81a40826a` المراجعة المستقلة النهائية دون High أو Medium findings.
+- تم squash merge لـPR #35.
+- Squash/main SHA: `b14c1fe2e144cb58cd0618501abe3f10c5a88494`.
+- تم تطبيق migration:
+  - `20260802172230_knowledge_create_idempotency.sql`
+- تم التحقق أن migration history يحتوي صفًا واحدًا فقط للهجرة.
+- تم التحقق من:
+  - وجود `knowledge_source_create_requests`.
+  - وجود `create_idempotent_knowledge_source(...)`.
+  - RLS + FORCE RLS.
+  - عدم وجود direct browser grants على ledger table.
+  - authenticated يستطيع RPC الجديد ولا يستطيع legacy creation RPC.
+- Vercel production deployment:
+  - `dpl_3ffgPf2G7fFr6Jb92TcU2wo7R7Q8`
+  - الحالة: READY.
+  - الإنتاج: `https://dbl-employee-ai.vercel.app`
+- لم تظهر runtime error clusters أو 5xx أو regressions بعد النشر.
+- لم تُنشأ production test records لاختبار concurrency/failure paths؛ تم الاعتماد على isolated DB/E2E coverage.
+
+### إغلاق آخر مشكلتين في PR #35
+
+قبل الدمج أغلقت المراجعة النهائية حالتين Medium:
+
+- approval commit مع ضياع الاستجابة:
+  - authoritative reconciliation لنفس source_id.
+  - `made_available` عند ثبوت الاعتماد.
+  - partial-success عند ثبوت بقاء العنصر غير معتمد.
+  - `approval_status_unknown` عند تعذر تحديد الحالة.
+- create commit مع ضياع الاستجابة ثم reload/remount:
+  - idempotency attempt UUID محفوظ في `sessionStorage`.
+  - نفس المفتاح عبر retry/remount/reload/double-click.
+  - Save and add another يولد مفتاحًا جديدًا لعنصر جديد مقصود.
+  - fingerprint conflict يفشل بأمان ويتطلب Start a new item.
+
+التحقق النهائي للرأس المدموج:
+
+- Vitest 431/431.
+- Authenticated E2E 12/12.
+- Foundation CI passed.
+- Supabase reset passed.
+- pgTAP passed.
+- Production build passed.
+- Vercel Preview Ready.
+
 ### استئناف PR #35 بعد عودة Codex
 
 - عاد Codex بعد توقف الحصة السابقة.
@@ -13,34 +59,19 @@
 - تم تثبيت السلوك الصحيح لـ“Save and add another”:
   - عملية جديدة فعلًا تحصل على idempotency key جديد.
   - retry أو النقر المكرر لنفس العملية يحتفظ بالمفتاح نفسه.
-- الرأس الجديد لـPR #35 أصبح:
-  - `c0421c86bcd2ca87c0ff338a3de77256d061d0e1`
-- التحقق النهائي:
-  - focused tests 13/13
-  - Vitest 423/423
-  - Foundation CI passed
-  - Supabase reset passed
-  - pgTAP passed
-  - Authenticated E2E passed
-  - Vercel Preview Ready
-- المراجعة الذاتية الحالية:
-  - High: none
-  - Medium: none
-  - readiness: 99/100
-- PR #35 ما زال Draft وغير مدمج بانتظار مراجعة مستقلة نهائية ثم squash merge إذا بقي نظيفًا.
 
 ### Meta / Google Cloud
 
 - Business Verification لدى Meta ما زالت Pending/In progress لأكثر من أسبوع.
 - تم التأكيد أن Google Cloud وSecret Manager وحساب الخدمة والصلاحيات اللازمة لتخزين أسرار WhatsApp قد جُهزت سابقًا بالكامل.
 - `GOOGLE_SERVICE_ACCOUNT_JSON` موجود على Vercel.
-- لا حاجة لإعادة إنشاء بنية Google Cloud؛ المتبقي فقط تدقيق متغيرات Meta/WhatsApp في Vercel عند الحاجة.
+- لا حاجة لإعادة إنشاء بنية Google Cloud؛ المتبقي هو تدقيق متغيرات Meta/WhatsApp في Vercel عند الحاجة.
 
 ## 2026-08-05
 
 - إنشاء مستودع `dbl-product-memory` كذاكرة مؤسسية مستقلة للمشروع.
 - توثيق الرؤية، الحالة الحالية، القرارات، المشاكل، والعوائق.
-- PR #35 ما زال Draft بانتظار دفع آخر إصلاح محلي بعد تجدد قدرة Codex الخارجية.
+- PR #35 كان Draft بانتظار استئناف Codex ودفع آخر إصلاح محلي.
 
 ## 2026-08-02
 
