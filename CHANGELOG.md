@@ -2,6 +2,70 @@
 
 > التواريخ أدناه تسجل مراحل المنتج الأساسية، وليست كل commit صغير.
 
+## 2026-08-09
+
+### PR #36 — Meta administrator testing readiness + Vercel WIF
+
+- بدأ PR #36 لفتح Embedded Signup للاختبار الإداري الآمن أثناء انتظار موافقات Meta الخارجية.
+- تم تدقيق Vercel وتبيّن أن متغيرات Meta/WhatsApp كانت مفقودة؛ تمت إضافتها إلى Production وPreview كـSensitive variables.
+- تم تأكيد استخدام Meta config الصحيح المنتهي بـ`1674` وعدم استخدام القديم `3161`.
+- تم الحفاظ على `META_EMBEDDED_SIGNUP_RELEASE_STAGE=testing` وعدم الادعاء بجاهزية onboarding للعملاء الخارجيين.
+- تم إصلاح sequencing:
+  - SDK و`FB.init` قبل تفعيل الزر.
+  - prepared state قبل click.
+  - `FB.login` synchronous داخل user gesture دون `await` قبله.
+- اكتُشف أن حساب runtime المخصص لـWhatsApp لا يملك JSON key، وأن JSON الموجود في Vercel مرتبط بمسار Vertex AI ولا يملك Secret Manager role المطلوبة.
+- بدل توسيع صلاحيات `vertex-express` أو إنشاء key طويل العمر، تم اعتماد Vercel OIDC + Google Workload Identity Federation.
+
+### WIF / IAM
+
+- Vercel OIDC: Team issuer mode.
+- Workload Identity Pool: `dbl-vercel-runtime`.
+- Provider: `vercel-dbl-employee-ai`.
+- trust مقيد على فريق DBL ومشروع `dbl-employee-ai` وPreview/Production فقط.
+- تم منح `roles/iam.workloadIdentityUser` فقط للهوية الفدرالية على:
+  - `dbl-employee-ai-runtime@dbl-employee-ai.iam.gserviceaccount.com`
+- لم يُمنح project-wide role للهوية الفدرالية.
+- لم تُمنح صلاحيات WhatsApp Secret Manager لـ`vertex-express`.
+- لم يُنشأ أي JSON key جديد.
+- Secret Manager custom role بقي بأربع الصلاحيات المحدودة السابقة.
+
+### Vercel WIF environment
+
+أضيفت إلى Production وPreview:
+
+- `GCP_PROJECT_NUMBER`
+- `GCP_SERVICE_ACCOUNT_EMAIL`
+- `GCP_WORKLOAD_IDENTITY_POOL_ID`
+- `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID`
+
+### Live Preview verification
+
+- WIF probe: passed.
+- Vercel OIDC → Google STS → service-account impersonation: passed.
+- Secret Manager authorization readiness endpoint: HTTP 200 `ready`.
+- لم تتم قراءة customer secret أو secret value.
+- `metaConfigured=true`.
+- Facebook SDK loaded.
+- `FB.init` passed.
+- prepared server state passed.
+- Connect button enabled only after readiness.
+- لا runtime errors أو 5xx مرتبطة بالمسار.
+- تم إصلاح الفصل بين OIDC token audience وSTS audience حسب متطلبات Google.
+- Controlled click وصل إلى Facebook SDK وطلب Facebook، لكن automation surface لم يعرض popup المرئي، لذلك النتيجة المرئية داخل Meta تحتاج تأكيدًا يدويًا لاحقًا.
+- لم تتم أي WABA/phone mutation.
+
+الرأس الحالي لـPR #36:
+
+- `a685d549a6f8c9eb2ab18202456171f56b558c86`
+
+الحالة:
+
+- Draft.
+- غير مدمج.
+- infrastructure blocker تم حله.
+- الخطوة التالية: independent technical review ثم merge إذا لم تظهر High/Medium findings.
+
 ## 2026-08-08
 
 ### دمج PR #35 وإطلاق approval/idempotency الجديد
@@ -11,34 +75,13 @@
 - Squash/main SHA: `b14c1fe2e144cb58cd0618501abe3f10c5a88494`.
 - تم تطبيق migration:
   - `20260802172230_knowledge_create_idempotency.sql`
-- تم التحقق أن migration history يحتوي صفًا واحدًا فقط للهجرة.
-- تم التحقق من:
-  - وجود `knowledge_source_create_requests`.
-  - وجود `create_idempotent_knowledge_source(...)`.
-  - RLS + FORCE RLS.
-  - عدم وجود direct browser grants على ledger table.
-  - authenticated يستطيع RPC الجديد ولا يستطيع legacy creation RPC.
-- Vercel production deployment:
-  - `dpl_3ffgPf2G7fFr6Jb92TcU2wo7R7Q8`
-  - الحالة: READY.
-  - الإنتاج: `https://dbl-employee-ai.vercel.app`
+- Vercel production deployment أصبح READY.
 - لم تظهر runtime error clusters أو 5xx أو regressions بعد النشر.
-- لم تُنشأ production test records لاختبار concurrency/failure paths؛ تم الاعتماد على isolated DB/E2E coverage.
 
 ### إغلاق آخر مشكلتين في PR #35
 
-قبل الدمج أغلقت المراجعة النهائية حالتين Medium:
-
-- approval commit مع ضياع الاستجابة:
-  - authoritative reconciliation لنفس source_id.
-  - `made_available` عند ثبوت الاعتماد.
-  - partial-success عند ثبوت بقاء العنصر غير معتمد.
-  - `approval_status_unknown` عند تعذر تحديد الحالة.
-- create commit مع ضياع الاستجابة ثم reload/remount:
-  - idempotency attempt UUID محفوظ في `sessionStorage`.
-  - نفس المفتاح عبر retry/remount/reload/double-click.
-  - Save and add another يولد مفتاحًا جديدًا لعنصر جديد مقصود.
-  - fingerprint conflict يفشل بأمان ويتطلب Start a new item.
+- approval commit مع ضياع الاستجابة أصبح يستخدم authoritative reconciliation.
+- create commit مع ضياع الاستجابة ثم reload/remount أصبح محميًا بـsession-scoped idempotency attempt UUID.
 
 التحقق النهائي للرأس المدموج:
 
@@ -48,30 +91,11 @@
 - Supabase reset passed.
 - pgTAP passed.
 - Production build passed.
-- Vercel Preview Ready.
-
-### استئناف PR #35 بعد عودة Codex
-
-- عاد Codex بعد توقف الحصة السابقة.
-- تم دفع آخر إصلاح محلي كان عالقًا في:
-  - `components/knowledge-task-form-actions.tsx`
-  - `tests/e2e/knowledge-idempotency.spec.ts`
-- تم تثبيت السلوك الصحيح لـ“Save and add another”:
-  - عملية جديدة فعلًا تحصل على idempotency key جديد.
-  - retry أو النقر المكرر لنفس العملية يحتفظ بالمفتاح نفسه.
-
-### Meta / Google Cloud
-
-- Business Verification لدى Meta ما زالت Pending/In progress لأكثر من أسبوع.
-- تم التأكيد أن Google Cloud وSecret Manager وحساب الخدمة والصلاحيات اللازمة لتخزين أسرار WhatsApp قد جُهزت سابقًا بالكامل.
-- `GOOGLE_SERVICE_ACCOUNT_JSON` موجود على Vercel.
-- لا حاجة لإعادة إنشاء بنية Google Cloud؛ المتبقي هو تدقيق متغيرات Meta/WhatsApp في Vercel عند الحاجة.
 
 ## 2026-08-05
 
 - إنشاء مستودع `dbl-product-memory` كذاكرة مؤسسية مستقلة للمشروع.
 - توثيق الرؤية، الحالة الحالية، القرارات، المشاكل، والعوائق.
-- PR #35 كان Draft بانتظار استئناف Codex ودفع آخر إصلاح محلي.
 
 ## 2026-08-02
 
@@ -79,61 +103,34 @@
 
 - دمج PR #34.
 - تحويل `/knowledge` إلى مركز “ذاكرة الموظف الذكي”.
-- تقسيم المعرفة إلى:
-  - معلومات النشاط
-  - المنتجات والخدمات
-  - السياسات
-  - الأسئلة الشائعة
-  - المستندات
-  - المعرفة الأخرى
-- إضافة forms متخصصة بدل نموذج تقني واحد.
-- إخفاء Source Type وPriority والمفاهيم الداخلية.
-- إضافة AI Employee Readiness:
-  - business 30%
-  - products/services 30%
-  - policies 20%
-  - FAQs 20%
+- تقسيم المعرفة إلى معلومات النشاط، المنتجات والخدمات، السياسات، الأسئلة الشائعة، المستندات، والمعرفة الأخرى.
+- إضافة AI Employee Readiness بنسبة 30/30/20/20.
 - فصل Documents كـoptional enrichment.
 - إصلاح round-trip preservation للحقول المخفية والسياسات والتسعير.
-
-### PR #35
-
-- بدء تصحيح approval UX.
-- توضيح أن review داخل Workspace العميل.
-- إضافة owner/admin publish، agent submit، viewer read-only.
-- إضافة review queue.
-- اكتشاف create-and-publish duplication risk.
-- الموافقة على migration آمنة لـidempotency.
 
 ## 2026-08-01
 
 - دمج PR #32: ترجمة protected product surfaces بالعربية والإنجليزية.
 - إضافة authenticated Playwright E2E ببيانات اصطناعية محلية.
-- إصلاح bidi/date/validation/accessibility في Conversations/Knowledge/Settings/Onboarding/WhatsApp.
 - دمج PR #33: إضافة Knowledge إلى primary navigation وفصلها عن Knowledge settings.
 
 ## 2026-07-29 إلى 2026-07-30
 
 - دمج PR #29: Privacy، Terms، Data Deletion العامة والثنائية اللغة.
-- تصحيح legal overclaims وdeletion process وcanonical domain.
 - دمج PR #30: localization/theme foundation.
-- فصل UI locale عن AI reply language.
-- إضافة locale provenance وSSR lang/dir/theme.
 - دمج PR #31: ترجمة AppShell وAuth flows وتحسين accessibility.
 
 ## 2026-07-28
 
 - التحقيق العميق في Meta Embedded Signup.
-- بناء عدة isolated revisions وprivacy-safe debug panels.
 - إثبات أن config القديم يعيد ordinary Facebook Login.
-- إنشاء standalone minimal reproduction.
 - إنشاء config جديد صحيح ينتهي بـ1674.
 - بدء Independent Tech Provider qualification.
 - Business Verification بقي pending.
 
 ## 2026-07-26
 
-- دمج PR #25: جعل onboarding وAI Settings قابلة للاكتشاف.
+- دمج PR #25: onboarding وAI Settings discoverability.
 - دمج PR #26: Meta Embedded Signup foundation، Secret Manager، secure session state، disconnect/reconnect.
 - دمج PR #27: فصل WhatsApp credential project عن Vertex project.
 - دمج PR #28: تأمين legacy reviews table.
