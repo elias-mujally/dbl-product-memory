@@ -4,67 +4,52 @@
 
 ## 2026-08-09
 
-### PR #36 — Meta administrator testing readiness + Vercel WIF
+### دمج PR #36 — Meta administrator testing readiness + Vercel WIF
+
+- تم تأكيد إضافة نطاق Production `https://dbl-employee-ai.vercel.app/` يدويًا إلى Meta Allowed Domains for the JavaScript SDK.
+- بقي Meta Embedded Signup config الصحيح المنتهي بـ`1674` دون تغيير.
+- تم تحويل PR #36 من Draft إلى Ready for Review ثم squash merge على الرأس المراجع:
+  - `a685d549a6f8c9eb2ab18202456171f56b558c86`
+- Squash/main SHA الجديد:
+  - `d4d5dbfa988dc2e653f0164193fb9df5a4aba5f2`
+- تم الدمج مباشرة عبر GitHub مع حماية expected head SHA.
+
+### PR #36 قبل الدمج
 
 - بدأ PR #36 لفتح Embedded Signup للاختبار الإداري الآمن أثناء انتظار موافقات Meta الخارجية.
-- تم تدقيق Vercel وتبيّن أن متغيرات Meta/WhatsApp كانت مفقودة؛ تمت إضافتها إلى Production وPreview كـSensitive variables.
-- تم تأكيد استخدام Meta config الصحيح المنتهي بـ`1674` وعدم استخدام القديم `3161`.
-- تم الحفاظ على `META_EMBEDDED_SIGNUP_RELEASE_STAGE=testing` وعدم الادعاء بجاهزية onboarding للعملاء الخارجيين.
-- تم إصلاح sequencing:
-  - SDK و`FB.init` قبل تفعيل الزر.
-  - prepared state قبل click.
-  - `FB.login` synchronous داخل user gesture دون `await` قبله.
-- اكتُشف أن حساب runtime المخصص لـWhatsApp لا يملك JSON key، وأن JSON الموجود في Vercel مرتبط بمسار Vertex AI ولا يملك Secret Manager role المطلوبة.
-- بدل توسيع صلاحيات `vertex-express` أو إنشاء key طويل العمر، تم اعتماد Vercel OIDC + Google Workload Identity Federation.
+- تمت إضافة متغيرات Meta/WhatsApp إلى Vercel Production وPreview كـSensitive variables.
+- تم اعتماد `META_EMBEDDED_SIGNUP_RELEASE_STAGE=testing`.
+- تم إصلاح sequencing بحيث SDK و`FB.init` وprepared state يجهزون قبل click، و`FB.login` يعمل synchronous داخل user gesture.
+- تم اعتماد Vercel OIDC + Google Workload Identity Federation بدل إنشاء JSON key طويل العمر لحساب WhatsApp runtime.
 
 ### WIF / IAM
 
-- Vercel OIDC: Team issuer mode.
 - Workload Identity Pool: `dbl-vercel-runtime`.
 - Provider: `vercel-dbl-employee-ai`.
-- trust مقيد على فريق DBL ومشروع `dbl-employee-ai` وPreview/Production فقط.
-- تم منح `roles/iam.workloadIdentityUser` فقط للهوية الفدرالية على:
+- trust مقيد على فريق DBL ومشروع `dbl-employee-ai` وPreview/Production.
+- تم منح `roles/iam.workloadIdentityUser` فقط على:
   - `dbl-employee-ai-runtime@dbl-employee-ai.iam.gserviceaccount.com`
 - لم يُمنح project-wide role للهوية الفدرالية.
 - لم تُمنح صلاحيات WhatsApp Secret Manager لـ`vertex-express`.
 - لم يُنشأ أي JSON key جديد.
-- Secret Manager custom role بقي بأربع الصلاحيات المحدودة السابقة.
-
-### Vercel WIF environment
-
-أضيفت إلى Production وPreview:
-
-- `GCP_PROJECT_NUMBER`
-- `GCP_SERVICE_ACCOUNT_EMAIL`
-- `GCP_WORKLOAD_IDENTITY_POOL_ID`
-- `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID`
 
 ### Live Preview verification
 
 - WIF probe: passed.
 - Vercel OIDC → Google STS → service-account impersonation: passed.
-- Secret Manager authorization readiness endpoint: HTTP 200 `ready`.
-- لم تتم قراءة customer secret أو secret value.
+- Secret Manager authorization probe: passed.
 - `metaConfigured=true`.
-- Facebook SDK loaded.
-- `FB.init` passed.
-- prepared server state passed.
-- Connect button enabled only after readiness.
-- لا runtime errors أو 5xx مرتبطة بالمسار.
-- تم إصلاح الفصل بين OIDC token audience وSTS audience حسب متطلبات Google.
-- Controlled click وصل إلى Facebook SDK وطلب Facebook، لكن automation surface لم يعرض popup المرئي، لذلك النتيجة المرئية داخل Meta تحتاج تأكيدًا يدويًا لاحقًا.
+- Facebook SDK و`FB.init`: passed.
+- prepared server state: passed.
+- Connect button readiness: passed.
+- Meta registration UI ظهرت يدويًا عند الضغط على Connect.
 - لم تتم أي WABA/phone mutation.
 
-الرأس الحالي لـPR #36:
+### الخطوة بعد الدمج
 
-- `a685d549a6f8c9eb2ab18202456171f56b558c86`
-
-الحالة:
-
-- Draft.
-- غير مدمج.
-- infrastructure blocker تم حله.
-- الخطوة التالية: independent technical review ثم merge إذا لم تظهر High/Medium findings.
+- انتظار Vercel Production deployment حتى READY.
+- تنفيذ safe Production smoke verification لمسار `/settings/whatsapp`.
+- بعدها الانتقال إلى Contacts MVP ثم Analytics MVP.
 
 ## 2026-08-08
 
@@ -73,8 +58,7 @@
 - اجتاز الرأس `f09dc02e54a2c3a97805df4400bfc1b81a40826a` المراجعة المستقلة النهائية دون High أو Medium findings.
 - تم squash merge لـPR #35.
 - Squash/main SHA: `b14c1fe2e144cb58cd0618501abe3f10c5a88494`.
-- تم تطبيق migration:
-  - `20260802172230_knowledge_create_idempotency.sql`
+- تم تطبيق migration `20260802172230_knowledge_create_idempotency.sql`.
 - Vercel production deployment أصبح READY.
 - لم تظهر runtime error clusters أو 5xx أو regressions بعد النشر.
 
