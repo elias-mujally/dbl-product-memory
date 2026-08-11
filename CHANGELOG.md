@@ -4,7 +4,93 @@
 
 ## 2026-08-11
 
-### اعتماد Contacts Foundation تقنيًا
+### دمج PR #37 — Contacts Foundation
+
+- تم تنفيذ Contacts PR 1 كـFoundation فقط، بدون تغيير WhatsApp runtime أو Conversations أو Messages أو AI أو UI.
+- اجتاز الرأس `9de793fd0c9d2cfb0fa55f35b85ebbe8ed4f614d` مراجعة مستقلة دون High أو Medium findings.
+- تم squash merge لـPR #37.
+- Squash/main SHA:
+  - `64f25ae666d9cd2b62cd1caa37f9f9c2d2f84ae3`
+
+### Production migration
+
+- repository migration source:
+  - `20260811183306_contacts_foundation.sql`
+- Production execution version:
+  - `20260811195845`
+- migration applied exactly once.
+- no unrelated migration applied.
+- no preflight / lock / constraint failure.
+- historical local/remote Supabase migration-ledger divergence remains separate operational debt; no repair attempted.
+
+### Contacts canonical foundation now exists
+
+Added:
+
+- `contacts`
+- `contact_channel_identities`
+
+Core rules:
+
+- Contact identity uses internal DBL UUID.
+- WhatsApp is the only supported channel now.
+- receiving `phone_number_id` is snapshotted as WhatsApp account scope.
+- canonical identity uniqueness:
+
+```text
+workspace_id + channel + channel_account_external_id + external_user_id
+```
+
+- legacy compatibility uses `contact_channel_identities.legacy_customer_id`.
+- existing `customers` remains.
+- conversations/messages remain unchanged.
+- ingestion remains unchanged until PR 2.
+
+### Production verification
+
+Production after migration:
+
+- legacy customers: `1`
+- canonical Contacts: `1`
+- compatibility identities: `1`
+- customers without identity: `0`
+- orphan Contacts: `0`
+- orphan identities: `0`
+- workspace/relationship mismatches: `0`
+
+Legacy counts preserved:
+
+- customers: `1`
+- conversations: `1`
+- messages: `17`
+
+Security verification:
+
+- RLS + FORCE RLS passed.
+- anon denied.
+- authenticated has workspace-scoped SELECT only.
+- browser writes denied.
+- service_role has SELECT/INSERT/UPDATE and no DELETE.
+
+Runtime:
+
+- Vercel deployment `dpl_EKRnti8TQDxjX5xiF8Cn6CGm3LMu` became READY.
+- no runtime error clusters or 5xx detected.
+- no WhatsApp regression detected.
+- `/contacts` still returns 404 and navigation remains disabled.
+
+### PR 1 → PR 2 gap
+
+- PR 1 does not dual-write new WhatsApp customers into canonical Contacts yet.
+- unmapped post-migration customers at verification: `0`.
+- the gap remains safe because Contacts UI/runtime is disabled.
+- next approved phase is **Contacts PR 2 — WhatsApp Contact Integration**.
+
+Reference:
+
+`events/2026-08-11-pr37-contacts-foundation-merged.md`
+
+### اعتماد Contacts Foundation تقنيًا قبل التنفيذ
 
 - تم اعتماد `CONTACTS_ARCHITECTURE.md` كخطة WhatsApp-first, Channel-ready.
 - تم إجراء Technical Audit كامل على `main` بواسطة Codex دون تعديل أي ملف.
@@ -39,7 +125,7 @@ Approved consequence:
 - batching is not required;
 - online/concurrent index construction is not required;
 - no remediation is required before PR 1;
-- Contacts PR 1 implementation is now authorized.
+- Contacts PR 1 implementation was authorized.
 
 The preflight modified no files, schema, production data, migrations, or configuration.
 
