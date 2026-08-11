@@ -211,3 +211,202 @@ Cloud Run وimmutable Vercel URLs قد تُستخدم للتحقق، لكنها 
 6. Production verification.
 
 هذا الأسلوب اكتشف أخطاء لم تكن ستظهر من الاختبارات السطحية وحدها.
+
+---
+
+## 15. Contacts: WhatsApp-first, Channel-ready
+
+**القرار:**
+
+Contacts تُبنى كهوية عميل عامة قابلة لاستيعاب قنوات مستقبلية، بينما يبقى WhatsApp القناة الوحيدة المدعومة فعليًا الآن.
+
+**السبب:**
+
+لا نريد ربط Contact نهائيًا بواتساب، ولا نريد في المقابل تنفيذ Instagram/Facebook أو تعميم provider infrastructure مبكرًا.
+
+**النتيجة:**
+
+- Contact مستقل عن provider.
+- Channel Identity منفصلة.
+- WhatsApp-specific infrastructure يبقى WhatsApp-specific حاليًا.
+
+---
+
+## 16. Contact ID هو UUID داخلي، وليس رقم هاتف أو Provider ID
+
+**القرار:**
+
+المعرف الأساسي للـContact هو UUID داخلي من DBL.
+
+**ممنوع كـprimary identity:**
+
+- phone number
+- email
+- WhatsApp user ID
+- Meta provider ID
+
+**السبب:**
+
+هذه القيم يمكن أن تتغير أو تتعدد، بينما Contact يجب أن يبقى كيانًا مستقرًا طويل العمر.
+
+---
+
+## 17. WhatsApp account scope للـContact Identity يستخدم `phone_number_id`
+
+**القرار:**
+
+في التصميم الحالي، uniqueness لهوية WhatsApp تعتمد على snapshot من receiving `phone_number_id`، لا على `whatsapp_connection_id` وحده.
+
+**السبب:**
+
+التدقيق كشف أن connection UUID قد يُعاد استخدامه بينما تتغير provider-account metadata عند إعادة الربط، لذلك ليس immutable account identifier كافيًا.
+
+**الـinvariant:**
+
+```text
+workspace_id + channel + channel_account_external_id + external_user_id
+= one Channel Identity
+```
+
+---
+
+## 18. Legacy compatibility عبر `contact_channel_identities.legacy_customer_id`
+
+**القرار:**
+
+لا نضيف `contact_id` إلى `customers` في PR 1، ولا نجعل `contacts` يحمل `legacy_customer_id`.
+
+الربط المؤقت يكون عبر:
+
+`contact_channel_identities.legacy_customer_id`
+
+**السبب:**
+
+- `customers` يبقى untouched.
+- WhatsApp customer يربط بهويته الصحيحة أولًا، ثم Contact.
+- لا dual source of truth.
+- لا mapping table ثالث غير ضروري.
+- إزالة legacy layer مستقبلًا أوضح.
+
+---
+
+## 19. Contacts PR 1 لا يلمس Conversations أو Messages أو Ingestion
+
+**القرار:**
+
+في PR 1:
+
+- `conversations`: unchanged
+- `messages`: unchanged
+- WhatsApp ingestion behavior: unchanged
+- outbound routing: unchanged
+- AI behavior: unchanged
+- لا `/contacts` UI
+
+**السبب:**
+
+PR 1 يجب أن يكون additive foundation فقط. ربط Conversations الآن سيخلق dual-write ومخاطر drift قبل إثبات الهوية الجديدة.
+
+---
+
+## 20. Contacts RLS في MVP: جميع أعضاء Workspace النشطين يقرؤون، ولا Browser Writes
+
+**القرار:**
+
+Owner/Admin/Agent/Viewer يستطيعون قراءة Contacts داخل Workspace النشط نفسه.
+
+- لا authenticated browser INSERT.
+- لا authenticated browser UPDATE.
+- لا authenticated browser DELETE.
+- provider/ingestion writes تبقى server/service-controlled.
+
+**السبب:**
+
+Contacts MVP read-only ويتوافق مع نموذج customer/conversation visibility الحالي، مع الحفاظ على tenant isolation.
+
+---
+
+## 21. لا Merge ولا Delete للـContacts في MVP
+
+**القرار:**
+
+- لا automatic merge.
+- لا manual merge.
+- لا Contact deletion.
+- Disconnect لا يحذف Contact/Identity/history.
+
+**السبب:**
+
+الدمج اعتمادًا على الاسم أو identifiers غير الموثوقة خطر، وحذف integration ليس طلب حذف تاريخ العميل.
+
+---
+
+## 22. Provider Name له أولوية محدودة فقط
+
+**القرار:**
+
+Provider display name يمكنه تحديث Contact name فقط إذا:
+
+- Contact name فارغ؛ أو
+- Contact name ما يزال مساويًا للقيمة السابقة القادمة من Provider.
+
+أي manual Contact name مستقبلًا له أولوية ولا يُمسح بتحديث provider.
+
+**السبب:**
+
+منع provider refresh من الكتابة فوق بيانات أعلى ثقة دون الحاجة لنظام provenance معقد في MVP.
+
+---
+
+## 23. Production Contacts Preflight هو Go/No-Go gate
+
+**القرار:**
+
+لا يبدأ Contacts PR 1 implementation قبل read-only production preflight يثبت:
+
+- customer count معروف؛
+- zero workspace/connection mismatch؛
+- zero customers على connection بلا `phone_number_id`؛
+- zero proposed identity collisions؛
+- لا anomaly تحتاج remediation.
+
+**إذا ظهرت anomaly:**
+
+STOP. لا auto-fix ولا auto-merge ولا normalization صامت.
+
+**السبب:**
+
+المعمارية يجب أن تتكيف مع البيانات الحقيقية، لا أن تخمن أثناء migration.
+
+---
+
+## 24. PR 2 يجب أن يغلق فجوة PR 1 قبل تفعيل Contacts UI
+
+**القرار:**
+
+PR 2 يتبع PR 1 مباشرة قدر الإمكان ويضيف dual-write/catch-up للـContacts الناتجة من WhatsApp ingestion.
+
+لا يتم تفعيل `/contacts` قبل إثبات:
+
+- runtime Contact/Identity creation/linking؛
+- catch-up backfill للعملاء الذين ظهروا بعد snapshot الخاص بـPR 1؛
+- اكتمال التغطية بدون duplicates.
+
+**السبب:**
+
+PR 1 لا يغيّر ingestion، وبالتالي توجد فجوة زمنية مقصودة وآمنة فقط طالما لا تعتمد UI عليها.
+
+---
+
+## 25. تعقيد Backfill يعتمد على حجم Production الحقيقي
+
+**القرار:**
+
+لا نبني batching/monitoring infrastructure مسبقًا.
+
+- حجم صغير/متوسط → migration بسيطة.
+- حجم/مخاطر lock/WAL كبيرة → redesign rollout قبل التنفيذ.
+
+**السبب:**
+
+الاحتياط يجب أن يكون متناسبًا مع البيانات الفعلية، لا مع افتراضات نظرية.
