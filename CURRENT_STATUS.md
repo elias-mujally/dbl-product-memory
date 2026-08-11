@@ -1,116 +1,205 @@
 # الحالة الحالية
 
-آخر تحديث: **2026-08-09**
+آخر تحديث: **2026-08-11**
 
 ## ملخص سريع
 
-DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup أصبح جاهزًا تقنيًا للاختبار الإداري بعد دمج PR #36، بينما تبقى موافقات Meta التجارية الخارجية قيد الانتظار.
+DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup أصبح جاهزًا تقنيًا للاختبار الإداري بعد دمج PR #36 والتحقق الإنتاجي الناجح.
+
+التركيز الحالي انتقل إلى **Contacts Foundation** قبل Analytics.
+
+تم اعتماد:
+
+- Product architecture لميزة Contacts.
+- UX direction للـContacts MVP.
+- Technical audit كامل على `main`.
+- Technical Specification لـContacts PR 1.
+- مراجعة مستقلة من DeepSeek وافقت على التصميم مع شروط preflight/rollout.
+
+**التنفيذ لم يبدأ بعد.**
+
+الخطوة التالية هي **Read-only Production Contacts Preflight** كـGo/No-Go gate قبل أي migration.
 
 ## الإنتاج الحالي
 
 - Production: `https://dbl-employee-ai.vercel.app`
 - `main`: `d4d5dbfa988dc2e653f0164193fb9df5a4aba5f2`
 - آخر PR مدمج: **#36**
-- PR #35 أطلق approval workflow الداخلي وidempotent Knowledge creation.
-- PR #36 أطلق Meta administrator testing readiness وVercel OIDC + Google WIF لمسار WhatsApp Secret Manager.
+- Meta administrator testing readiness: verified in Production.
+- Meta commercial approvals الخارجية ما زالت مسارًا منفصلًا وغير مكتمل.
 
-## PR #36 تم دمجه
+## حالة Contacts الحالية
 
-PR: **#36 — feat: prepare Meta administrator signup testing**
+### Architectural direction
 
-- الحالة: **MERGED via squash**
-- الرأس الذي تمت مراجعته: `a685d549a6f8c9eb2ab18202456171f56b558c86`
-- Squash/main SHA: `d4d5dbfa988dc2e653f0164193fb9df5a4aba5f2`
-- قبل الدمج تم تأكيد أن Preview وCI خضراء على الرأس المراجع.
-- نطاق Production `https://dbl-employee-ai.vercel.app/` أضيف يدويًا إلى Meta Allowed Domains for the JavaScript SDK قبل الدمج.
-- Meta config الصحيح المنتهي بـ`1674` بقي دون تغيير.
+**WhatsApp-first, Channel-ready**.
 
-### ما الذي أصبح موجودًا؟
+- WhatsApp هو القناة الوحيدة المدعومة الآن.
+- Contact لا يجب أن يكون مساويًا دائمًا لـWhatsApp customer.
+- Future channels تبقى ممكنة بدون تنفيذها الآن.
+- `whatsapp_connections` وبنية provider تبقى WhatsApp-specific حاليًا ولا يتم تعميمها مبكرًا.
 
-- technical runtime readiness منفصلة عن Meta commercial approval.
-- `metaConfigured` يعتمد على إعدادات runtime الفعلية.
-- testing/pending Meta approval banner.
-- Facebook SDK و`FB.init` يكتملان قبل تفعيل Connect.
-- prepared server state قصير العمر يُنشأ قبل click.
-- `FB.login` يعمل synchronously داخل user gesture دون `await` قبله.
-- owner/admin فقط يمكنهما بدء الربط.
-- agent/viewer لا يملكان أدوات الربط.
+المرجع:
 
-## Vercel / Meta environment
+`CONTACTS_ARCHITECTURE.md`
 
-تمت إضافة متغيرات Meta/WhatsApp المطلوبة إلى Production وPreview كـSensitive variables:
+### Technical Specification
 
-- `META_APP_ID`
-- `META_APP_SECRET`
-- `META_EMBEDDED_SIGNUP_CONFIG_ID`
-- `WHATSAPP_CREDENTIAL_STORE`
-- `WHATSAPP_SECRET_MANAGER_PROJECT`
-- `WHATSAPP_PROVIDER`
-- `WHATSAPP_GRAPH_API_VERSION`
-- `WHATSAPP_VERIFY_TOKEN`
-- `META_EMBEDDED_SIGNUP_RELEASE_STAGE=testing`
+المرجع:
 
-ومتغيرات WIF:
+`CONTACTS_TECHNICAL_SPEC.md`
 
-- `GCP_PROJECT_NUMBER`
-- `GCP_SERVICE_ACCOUNT_EMAIL`
-- `GCP_WORKLOAD_IDENTITY_POOL_ID`
-- `GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID`
+تم اعتماد تصميم PR 1 التالي:
 
-## Google Cloud / Secret Manager / WIF
+- جدول جديد `contacts`.
+- جدول جديد `contact_channel_identities`.
+- Contact primary ID = DBL internal UUID.
+- WhatsApp account scope الحالي = receiving `phone_number_id` snapshot.
+- uniqueness المنطقية:
 
-المسار المعتمد:
+```text
+workspace_id + channel + channel_account_external_id + external_user_id
+= one Channel Identity
+```
 
-`Vercel OIDC → Google STS → service-account impersonation → Secret Manager`
+- legacy compatibility عبر:
 
-- Vercel OIDC: Team issuer mode.
-- Workload Identity Pool: `dbl-vercel-runtime`
-- Provider: `vercel-dbl-employee-ai`
-- trust مقيد على فريق DBL ومشروع `dbl-employee-ai` وPreview/Production فقط.
-- runtime service account:
-  - `dbl-employee-ai-runtime@dbl-employee-ai.iam.gserviceaccount.com`
-- federated principal مُنح فقط `roles/iam.workloadIdentityUser`.
-- لم يُنشأ JSON key جديد.
-- لم تُمنح صلاحيات WhatsApp Secret Manager لـ`vertex-express`.
-- JSON credential القديم بقي معزولًا لمسار Vertex AI.
+`contact_channel_identities.legacy_customer_id`
 
-## Live verification قبل الدمج
+- `customers` يبقى موجودًا وغير معدل في PR 1.
+- `conversations` لا تتغير في PR 1.
+- `messages` لا تتغير في PR 1.
+- WhatsApp ingestion behavior لا يتغير في PR 1.
+- outbound routing لا يتغير في PR 1.
+- AI behavior لا يتغير في PR 1.
+- `/contacts` UI لا تُفتح في PR 1.
 
-- WIF probe: Pass.
-- Google STS exchange: Pass.
-- service-account impersonation: Pass.
-- Secret Manager authorization probe: Pass.
-- `metaConfigured=true` على Preview.
-- Facebook SDK + `FB.init`: Pass.
-- prepared state: Pass.
-- Connect button readiness: Pass.
-- popup/registration page من Meta ظهرت يدويًا عند الضغط على Connect.
-- لم تُعدّل WABA أو phone assets أثناء الاختبار.
+### Permissions
 
-## Meta Business status
+Contacts MVP read-only:
 
-- Business Verification: ما زالت Pending/In progress.
-- Independent Tech Provider qualification بدأ لكنه متوقف على Business Verification.
-- Advanced Access وApp Review لم يكتملوا بعد.
-- external customer onboarding لا يُعتبر production-ready قبل موافقات Meta.
+- Owner: read
+- Admin: read
+- Agent: read
+- Viewer: read
+
+داخل Workspace النشط فقط.
+
+Normal browser writes ممنوعة.
+
+Provider/ingestion writes تبقى server/service-controlled.
+
+### Merge / Delete / Disconnect
+
+في MVP:
+
+- لا automatic merge.
+- لا manual merge.
+- لا Contact deletion.
+- WhatsApp disconnect لا يحذف Contact أو ChannelIdentity أو customer history أو conversations/messages.
+
+### Provider name precedence
+
+Provider display name يستطيع تحديث Contact name فقط إذا كان Contact name:
+
+- فارغًا؛ أو
+- ما يزال مساويًا للقيمة السابقة القادمة من Provider.
+
+أي manual name مستقبلي له أولوية.
+
+## Production Preflight — الخطوة التالية
+
+لا يبدأ PR 1 implementation قبل فحص Production قراءة فقط يثبت:
+
+1. customer row count وحجم migration المتوقع.
+2. zero customer workspace / WhatsApp connection workspace mismatches.
+3. zero customers attached to connections without `phone_number_id`.
+4. zero proposed identity collisions بعد normalization المطلوبة.
+5. عدم وجود anomaly تحتاج remediation خاصة.
+
+إذا ظهر أي anomaly:
+
+**STOP.**
+
+لا auto-fix، لا auto-merge، ولا normalization صامت.
+
+يجب تصميم remediation مستقلة أولًا.
+
+## PR sequencing المعتمد
+
+### PR 1 — Contacts Foundation
+
+- schema + RLS + backfill + tests فقط.
+- additive / forward-only.
+- لا runtime ingestion change.
+- لا UI.
+
+### PR 2 — WhatsApp Contact Integration
+
+يأتي مباشرة بعد PR 1 قدر الإمكان:
+
+- dual-write / create-link Contact + identity من ingestion.
+- catch-up backfill للعملاء الذين ظهروا بين PR 1 وPR 2.
+- duplicate/idempotency/concurrency coverage.
+
+### PR 3 — Contacts MVP UI
+
+فقط بعد إثبات اكتمال PR 2:
+
+- `/contacts`
+- `/contacts/[contactId]`
+- search/pagination
+- Arabic/English
+- desktop/mobile
+- read-only customer-memory experience
+
+### PR 4 — Legacy reduction later
+
+بعد استقرار المسار الجديد في Production، نراجع بشكل مستقل دور `customers` القديم.
+
+لا يوجد قرار مسبق بحذفه.
+
+## Performance rule
+
+تعقيد backfill يتحدد من Production preflight:
+
+- data صغيرة/متوسطة → migration بسيطة.
+- volume أو lock/WAL risk ملحوظ → إعادة تصميم rollout/batching قبل التنفيذ.
+
+لا نبني مراقبة أو batching معقدة من باب الاحتياط النظري فقط.
+
+## Independent review
+
+### Codex
+
+- audit read-only كامل.
+- PR 1 risk: **4/10 — Low-to-medium**.
+- recommendation: implementation conditionally ready after production preflight.
+
+### DeepSeek
+
+- وافق على architecture/technical audit.
+- أكد ضرورة حسم open decisions.
+- أكد preflight كـGo/No-Go.
+- أوصى بإبقاء PR 2 قريبًا جدًا من PR 1.
+- أوصى بمراقبة migration proportional to actual volume.
+
+تم اعتماد هذه التوصيات.
 
 ## الخطوة التالية حرفيًا
 
-1. انتظار Vercel Production deployment الناتج عن دمج PR #36 حتى READY.
-2. التحقق من `/settings/whatsapp` بحساب owner/admin على Production.
-3. التأكد أن:
-   - `metaConfigured=true`
-   - testing banner ظاهر
-   - Connect يعمل
-   - Meta popup يفتح على Production
-   - لا WIF/STS/Secret Manager errors أو 5xx
-4. التوقف قبل أي WABA/phone asset mutation غير مطلوبة.
-5. بعد إغلاق تحقق Production، الانتقال إلى **Contacts MVP** ثم **Analytics MVP** كـPRs منفصلة.
+1. إعطاء Codex مهمة **Production Contacts Preflight — Read Only**.
+2. عدم تعديل أي file/schema/config/data أثناءها.
+3. مراجعة نتائج counts/anomalies.
+4. إذا zero blockers → إعطاء الضوء الأخضر لتنفيذ **Contacts PR 1 Foundation**.
+5. إذا anomaly → توقف وتصميم remediation قبل أي migration.
 
 ## لا تفعل الآن
 
-- لا تنشئ JSON key جديد لـ`dbl-employee-ai-runtime`.
-- لا تمنح `vertex-express` صلاحيات WhatsApp Secret Manager.
-- لا تغيّر Meta config أو secrets دون blocker مثبت.
-- لا تعتبر Business Verification مكتملة حتى تظهر فعليًا في Meta.
-- لا تبدأ Contacts أو Analytics قبل إغلاق تحقق Production الخاص بـPR #36.
+- لا تبدأ Contacts migration قبل preflight.
+- لا تفتح `/contacts` UI.
+- لا تعدل WhatsApp ingestion ضمن PR 1.
+- لا تضف Instagram/Facebook integration.
+- لا تعمم `whatsapp_connections` قبل وجود قناة ثانية فعلية.
+- لا تعمل merge تلقائي للعملاء.
+- لا تحذف `customers` أو Conversations history.
