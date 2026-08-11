@@ -185,6 +185,108 @@ This protects the UX from future storage migrations.
 
 ---
 
+## Refined invariants after architecture review
+
+The following rules were added after an external critical review of the architecture. They are **pre-implementation invariants**, not final SQL decisions.
+
+### Contact identity is always internal
+
+- The canonical Contact identifier is an internal DBL UUID.
+- Phone number, email, WhatsApp user ID, Instagram ID, username, or any provider identifier must never become the Contact primary key.
+- Provider identifiers belong to the channel-identity layer and may change or multiply over time.
+
+### A valid channel identity needs a trusted external identity
+
+- `display_name` is descriptive data, not an identity key.
+- Phone number is useful data, not a universal primary key.
+- In the WhatsApp phase, a channel identity must have a provider-trusted external identifier sufficient to distinguish that customer within the relevant workspace/channel account scope.
+- Missing display name or missing normalized phone must not by itself invalidate a legitimate provider identity.
+- The UI must use safe fallbacks for missing names/phones rather than creating a new manual-review workflow merely for incomplete cosmetic data.
+
+### Channel-identity creation/linking must be deterministic and idempotent
+
+Webhook retries, concurrency, and repeated ingestion must not create duplicate channel identities or duplicate Contacts for the same trusted provider identity.
+
+Conceptual invariant:
+
+```text
+workspace + channel + channel account/connection + external user identity
+→ at most one active channel identity
+```
+
+The exact unique constraint/key shape must be decided by the PR 1 technical audit against the current production schema.
+
+### Contact and ChannelIdentity are different domains even if today they are effectively 1:1
+
+Current WhatsApp-only usage may produce one Contact per one WhatsApp identity, but application/domain code must not assume this remains permanently 1:1.
+
+Future state may legitimately be:
+
+```text
+one Contact
+  ├─ WhatsApp identity
+  ├─ Instagram identity
+  └─ Facebook identity
+```
+
+### Provider updates need precedence/provenance rules
+
+Provider-derived attributes may change over time, for example WhatsApp display name or normalized phone information.
+
+The architecture must support this principle:
+
+- provider data can refresh provider-owned attributes;
+- provider refreshes must not silently erase or overwrite future higher-confidence/manual business data;
+- if DBL later allows business-edited Contact fields, the source/precedence of values must be explicit enough to prevent provider sync from undoing user intent.
+
+A full provenance subsystem is **not required in Contacts MVP**, but PR 1/2 must avoid designs that make this impossible later.
+
+### Disconnecting a channel does not delete the Contact or history
+
+Disconnecting WhatsApp, removing a provider connection, or losing channel authorization is not equivalent to deleting the customer.
+
+Therefore:
+
+- Contact history must not be automatically deleted merely because a channel disconnects;
+- the channel identity may become inactive/disconnected/historical according to the reviewed implementation;
+- conversation/message history remains subject to the product's independent retention/deletion/privacy lifecycle;
+- actual customer-data deletion must remain a separate explicit lifecycle decision.
+
+### Legacy mapping is intentionally not pre-selected
+
+The architecture does **not** pre-approve `legacy_customer_id`, `contact_id` on `customers`, or a mapping table.
+
+PR 1 must first inspect the exact current schema, FKs, ingestion path, indexes, RLS, and rollback/backfill constraints and then recommend the safest compatibility mechanism.
+
+Whatever mechanism is selected must be:
+
+- additive initially;
+- deterministic;
+- idempotent;
+- tenant-safe;
+- compatible with existing production data;
+- reversible/forward-recoverable without destructive customer-history rewriting.
+
+### Conversation linking timing must be decided by the PR 1 audit
+
+The long-term target remains:
+
+```text
+Conversation → Contact + ChannelIdentity
+```
+
+However, this document deliberately does not force `contact_id` or `channel_identity_id` into PR 2 before a schema audit.
+
+PR 1 must recommend when and how conversations become Contact-aware, including nullable/backfill strategy if relevant, with explicit migration and rollback safety.
+
+### Notifications are future scope, not a Contacts blocker
+
+Creating a new Contact may later emit or feed a domain event that supports notifications, automations, Slack alerts, CRM integrations, etc.
+
+Contacts MVP does not require notification infrastructure, and no event bus should be introduced solely for speculative future use.
+
+---
+
 ## Implementation roadmap
 
 ### Contacts PR 1 — Foundation
@@ -198,9 +300,13 @@ Expected work after a fresh schema audit:
 - WhatsApp channel identity model
 - workspace-scoped indexes and RLS
 - safe backfill plan for existing WhatsApp customers
-- compatibility link to existing records
+- compatibility-link decision based on the audited production schema
 - deterministic/idempotent migration behavior
-- database tests for tenant isolation and backfill correctness
+- explicit uniqueness semantics for trusted WhatsApp identities
+- missing-data/fallback behavior
+- provider-update precedence strategy sufficient for MVP safety
+- explicit recommendation for when/how conversations become Contact-aware
+- database tests for tenant isolation, concurrency/idempotency and backfill correctness
 
 No Contacts UI is required in this PR.
 
@@ -214,8 +320,11 @@ Requirements:
 - existing customers map safely to Contacts
 - new WhatsApp customers create/link Contacts and WhatsApp identities
 - retries remain idempotent
-- no duplicate Contact creation from ordinary ingestion retries
-- conversations remain correctly associated
+- concurrent/repeated ingestion cannot silently create duplicate identities/Contacts
+- missing name/phone data fails gracefully when provider identity is valid
+- provider-derived attribute refreshes respect the approved precedence rules
+- channel disconnect does not erase Contact/history
+- conversations remain correctly associated according to the migration strategy approved from PR 1
 - no provider configuration changes unless explicitly required and reviewed
 
 ### Contacts PR 3 — Contacts MVP UI
@@ -304,6 +413,7 @@ The first Contacts release is intentionally not a full CRM.
 - contact scoring
 - manual cross-channel linking
 - Instagram/Facebook UI
+- team notifications on Contact creation
 
 These may be designed later after real customer usage validates the need.
 
@@ -459,9 +569,10 @@ As of **2026-08-11**:
 - Future channel expansion is intentionally allowed by the Contact domain design.
 - Existing WhatsApp-specific infrastructure should remain provider-specific for now.
 - The Contacts MVP UX direction has been defined.
+- Critical-review refinements have been added: UUID identity, missing-data rules, uniqueness/idempotency, provider-data precedence, disconnect retention, legacy-mapping audit requirement, and conversation-linking decision gate.
 - No Contacts implementation has started from this plan yet.
 - Next engineering step: perform a fresh implementation/schema audit against current `main`, convert this architecture into an exact Technical Specification, then implement in small independently reviewed PRs beginning with the Contact Foundation.
 
 ### Decision summary
 
-> **Build Contacts as a WhatsApp-first customer-memory feature with a channel-ready domain boundary. Do not implement future channels now, do not prematurely generalize WhatsApp provider infrastructure, and do not lock the long-lived Contact identity to WhatsApp-specific storage.**
+> **Build Contacts as a WhatsApp-first customer-memory feature with a channel-ready domain boundary. Do not implement future channels now, do not prematurely generalize WhatsApp provider infrastructure, and do not lock the long-lived Contact identity to WhatsApp-specific storage. Contact identity is internal, channel identity is provider-scoped, creation/linking must be idempotent, and legacy/conversation migration details must be approved only after a fresh technical audit.**
