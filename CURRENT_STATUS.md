@@ -4,57 +4,85 @@
 
 ## ملخص سريع
 
-DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup أصبح جاهزًا تقنيًا للاختبار الإداري بعد دمج PR #36 والتحقق الإنتاجي الناجح.
+DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup جاهز تقنيًا للاختبار الإداري في Production بينما تبقى موافقات Meta التجارية الخارجية مسارًا منفصلًا.
 
-التركيز الحالي هو **Contacts Foundation** قبل Analytics.
+التركيز الحالي هو **Contacts** قبل Analytics.
 
-تم اعتماد وإنجاز:
+تم الآن إغلاق **Contacts PR 1 — Foundation** بالكامل بعد الدمج والتحقق الإنتاجي.
 
-- Product architecture لميزة Contacts.
-- UX direction للـContacts MVP.
-- Technical audit كامل على `main`.
-- Technical Specification لـContacts PR 1.
-- مراجعة مستقلة من DeepSeek وافقت على التصميم.
-- **Production Contacts Preflight قراءة فقط: GO.**
+الخطوة التالية المعتمدة:
 
-**Contacts PR 1 — Foundation أصبح مصرحًا ببدء تنفيذه.**
+> **Contacts PR 2 — WhatsApp Contact Integration**
+
+PR 2 لم يبدأ بعد.
+
+---
 
 ## الإنتاج الحالي
 
 - Production: `https://dbl-employee-ai.vercel.app`
-- `main`: `d4d5dbfa988dc2e653f0164193fb9df5a4aba5f2`
-- آخر PR مدمج: **#36**
-- Meta administrator testing readiness: verified in Production.
-- Meta commercial approvals الخارجية ما زالت مسارًا منفصلًا وغير مكتمل.
+- `main`: `64f25ae666d9cd2b62cd1caa37f9f9c2d2f84ae3`
+- آخر PR مدمج: **#37 — Contacts Foundation**
+- Vercel deployment: `dpl_EKRnti8TQDxjX5xiF8Cn6CGm3LMu`
+- Vercel status: **READY**
 
-## حالة Contacts الحالية
+---
 
-### Architectural direction
+## Contacts — الاتجاه المعتمد
 
 **WhatsApp-first, Channel-ready**.
 
 - WhatsApp هو القناة الوحيدة المدعومة الآن.
-- Contact لا يجب أن يكون مساويًا دائمًا لـWhatsApp customer.
-- Future channels تبقى ممكنة بدون تنفيذها الآن.
-- `whatsapp_connections` وبنية provider تبقى WhatsApp-specific حاليًا ولا يتم تعميمها مبكرًا.
+- Contact كيان مستقل عن WhatsApp customer على المدى الطويل.
+- Future channels تبقى ممكنة دون تنفيذها الآن.
+- WhatsApp provider infrastructure تبقى WhatsApp-specific حاليًا ولا يتم تعميمها مبكرًا.
 
-المرجع:
+المراجع:
 
-`CONTACTS_ARCHITECTURE.md`
+- `CONTACTS_ARCHITECTURE.md`
+- `CONTACTS_TECHNICAL_SPEC.md`
+- `CONTACTS_PRODUCTION_PREFLIGHT.md`
+- `events/2026-08-11-pr37-contacts-foundation-merged.md`
 
-### Technical Specification
+---
 
-المرجع:
+## Contacts PR 1 — CLOSED
 
-`CONTACTS_TECHNICAL_SPEC.md`
+### Merge
 
-تم اعتماد تصميم PR 1 التالي:
+- PR: **#37**
+- الحالة: **MERGED via squash**
+- reviewed head: `9de793fd0c9d2cfb0fa55f35b85ebbe8ed4f614d`
+- squash/main SHA: `64f25ae666d9cd2b62cd1caa37f9f9c2d2f84ae3`
 
-- جدول جديد `contacts`.
-- جدول جديد `contact_channel_identities`.
+### Migration
+
+Repository source:
+
+`20260811183306_contacts_foundation.sql`
+
+Production execution version:
+
+`20260811195845`
+
+- applied exactly once
+- no unrelated migration applied
+- no preflight / lock / constraint error
+- historical local/remote migration-ledger divergence remains separate operational debt and was not repaired
+
+### New canonical foundation
+
+تم إنشاء:
+
+- `contacts`
+- `contact_channel_identities`
+
+القواعد الأساسية:
+
 - Contact primary ID = DBL internal UUID.
-- WhatsApp account scope الحالي = receiving `phone_number_id` snapshot.
-- uniqueness المنطقية:
+- `channel='whatsapp'` فقط حاليًا.
+- WhatsApp account scope = receiving `phone_number_id` snapshot.
+- uniqueness:
 
 ```text
 workspace_id + channel + channel_account_external_id + external_user_id
@@ -65,171 +93,132 @@ workspace_id + channel + channel_account_external_id + external_user_id
 
 `contact_channel_identities.legacy_customer_id`
 
-- `customers` يبقى موجودًا وغير معدل في PR 1.
-- `conversations` لا تتغير في PR 1.
-- `messages` لا تتغير في PR 1.
-- WhatsApp ingestion behavior لا يتغير في PR 1.
-- outbound routing لا يتغير في PR 1.
-- AI behavior لا يتغير في PR 1.
-- `/contacts` UI لا تُفتح في PR 1.
+- `customers` بقي موجودًا.
+- `conversations` لم تتغير.
+- `messages` لم تتغير.
+- WhatsApp ingestion behavior لم يتغير في PR 1.
+- outbound/AI لم يتغيرا.
 
-### Permissions
+### Production backfill verification
 
-Contacts MVP read-only:
+بعد migration:
 
-- Owner: read
-- Admin: read
-- Agent: read
-- Viewer: read
+- legacy customers: **1**
+- canonical Contacts: **1**
+- compatibility identities: **1**
+- customers بدون identity: **0**
+- orphan Contacts: **0**
+- orphan identities: **0**
+- cross-workspace / relationship mismatches: **0**
 
-داخل Workspace النشط فقط.
+Legacy preservation:
 
-Normal browser writes ممنوعة.
+- customers: **1**
+- conversations: **1**
+- messages: **17**
 
-Provider/ingestion writes تبقى server/service-controlled.
+لم يُحذف أي historical customer/conversation/message.
 
-### Merge / Delete / Disconnect
+### RLS / privileges
 
-في MVP:
+Production verification passed:
 
-- لا automatic merge.
-- لا manual merge.
-- لا Contact deletion.
-- WhatsApp disconnect لا يحذف Contact أو ChannelIdentity أو customer history أو conversations/messages.
+- RLS enabled.
+- FORCE RLS enabled.
+- `anon` denied.
+- `authenticated` = workspace-scoped SELECT only.
+- browser INSERT/UPDATE/DELETE denied.
+- `service_role` = SELECT/INSERT/UPDATE only.
+- no service-role DELETE.
 
-### Provider name precedence
+### Runtime health
 
-Provider display name يستطيع تحديث Contact name فقط إذا كان Contact name:
+- Vercel Production: READY.
+- no runtime error clusters.
+- no 5xx cluster.
+- no Contacts-related Supabase error entries detected.
+- no WhatsApp runtime regression detected.
+- no synthetic Production provider traffic was created just for verification.
 
-- فارغًا؛ أو
-- ما يزال مساويًا للقيمة السابقة القادمة من Provider.
+### Contacts UI remains disabled
 
-أي manual name مستقبلي له أولوية.
+- `/contacts` returns 404.
+- navigation remains `href: null`.
+- no runtime UI depends on canonical Contacts yet.
 
-## Production Contacts Preflight — PASSED
+---
 
-المرجع:
+## Known PR 1 → PR 2 gap
 
-`CONTACTS_PRODUCTION_PREFLIGHT.md`
+PR 1 deliberately did not change ingestion.
 
-### النتيجة
+Therefore a customer created after PR 1 migration and before PR 2 integration may temporarily lack canonical Contact/identity.
 
-**GO**
+Current verified unmapped post-migration customers:
 
-### Production data observed
+**0**
 
-- total customers: **1**
-- workspaces with customers: **1**
-- customer-linked WhatsApp connections: **1**
-- connected: **1**
+The gap remains safe only because Contacts runtime/UI is disabled.
 
-### Blocking anomaly checks
+Operational rule:
 
-- customer/workspace vs connection/workspace mismatches: **0**
-- customers linked to connection missing `phone_number_id`: **0**
-- proposed canonical identity collision groups: **0**
-- WhatsApp user ID null/empty/whitespace/length anomalies: **0**
-- normalized identity collisions: **0**
-- duplicate legacy customer mapping violations: **0**
-- missing `profile_name`: **0**
-- missing `phone_number_normalized`: **0**
+- PR 2 should follow directly / within a short engineering window.
+- PR 2 must add atomic create/link dual-write behavior.
+- PR 2 must include idempotent catch-up backfill.
+- PR 2 must close the ingestion race before final catch-up validation.
+- `/contacts` must remain disabled until PR 2 proves complete canonical coverage.
 
-### Migration sizing
+---
 
-**Tiny**.
+## Contacts PR 2 — NEXT
 
-المعتمد حاليًا:
+Goal:
 
-- straightforward transactional backfill مناسب.
-- batching غير مطلوب.
-- online/concurrent index strategy غير مطلوب.
-- monitoring infrastructure خاص بالـbackfill غير مطلوب بهذا الحجم.
+**WhatsApp Contact Integration**
 
-إذا تغير حجم Production ماديًا قبل التنفيذ يجب إعادة تقييم هذا الحكم.
+Expected scope to plan/review before implementation:
 
-### PR 1 authorization
+- integrate canonical Contact + Channel Identity creation/linking into WhatsApp ingestion;
+- preserve existing customer/conversation/message behavior;
+- close retries/concurrency duplication risk;
+- perform catch-up for customers created after PR 1;
+- prove one intended WhatsApp identity maps to one canonical identity;
+- preserve provider data precedence rules;
+- keep Contacts UI disabled;
+- no Instagram/Facebook integration;
+- no legacy removal yet.
 
-بما أن preflight عاد بـzero blockers:
+PR 2 must be designed as a separate reviewed task. Do not assume implementation details before a fresh current-main audit.
 
-> **Contacts PR 1 — Foundation may begin using the approved Technical Specification unchanged unless implementation reveals a new concrete blocker.**
+---
 
-## PR sequencing المعتمد
-
-### PR 1 — Contacts Foundation — NEXT
-
-- schema + RLS + backfill + tests فقط.
-- additive / forward-only.
-- لا runtime ingestion change.
-- لا UI.
-
-### PR 2 — WhatsApp Contact Integration
-
-يأتي مباشرة بعد PR 1 قدر الإمكان:
-
-- dual-write / create-link Contact + identity من ingestion.
-- catch-up backfill للعملاء الذين ظهروا بين PR 1 وPR 2.
-- duplicate/idempotency/concurrency coverage.
-- إغلاق ingestion race قبل final catch-up validation.
+## Later sequencing
 
 ### PR 3 — Contacts MVP UI
 
-فقط بعد إثبات اكتمال PR 2:
+Only after PR 2 is production-verified:
 
 - `/contacts`
 - `/contacts/[contactId]`
 - search/pagination
 - Arabic/English
 - desktop/mobile
-- read-only customer-memory experience
+- read-only customer-memory UX
 
 ### PR 4 — Legacy reduction later
 
-بعد استقرار المسار الجديد في Production، نراجع بشكل مستقل دور `customers` القديم.
+After the canonical path is proven in Production, independently review the future role of `customers`.
 
-لا يوجد قرار مسبق بحذفه.
+No pre-approved requirement exists to delete it.
 
-## Performance rule
-
-تعقيد backfill يتحدد من Production data الفعلية.
-
-Preflight الحالي يصنف الحجم **Tiny**، لذلك لا نضيف batching/monitoring معقدًا بلا حاجة.
-
-## Independent review
-
-### Codex
-
-- audit read-only كامل.
-- PR 1 risk قبل preflight: **4/10 — Low-to-medium**.
-- Production preflight: **GO**.
-- implementation authorization: yes.
-
-### DeepSeek
-
-- وافق على architecture/technical audit.
-- أكد preflight كـGo/No-Go.
-- أوصى بإبقاء PR 2 قريبًا جدًا من PR 1.
-- أوصى بمراقبة migration proportional to actual volume.
-
-تم اعتماد هذه التوصيات، ونتيجة Production الحالية لا تستدعي batching أو migration-monitoring infrastructure إضافية.
-
-## الخطوة التالية حرفيًا
-
-1. إعطاء Codex مهمة تنفيذ **Contacts PR 1 — Foundation**.
-2. إنشاء Draft PR فقط، بلا دمج أو نشر يدوي.
-3. الالتزام بحدود `CONTACTS_TECHNICAL_SPEC.md`.
-4. تشغيل migration-upgrade tests وpgTAP/RLS/regression suites.
-5. self-review نقدي.
-6. إصلاح أي High/Medium findings.
-7. independent final review قبل squash merge.
-8. بعد PR 1، الانتقال بسرعة إلى PR 2 لإغلاق dual-write/catch-up gap قبل أي Contacts UI.
+---
 
 ## لا تفعل الآن
 
-- لا تفتح `/contacts` UI داخل PR 1.
-- لا تعدل WhatsApp ingestion ضمن PR 1.
-- لا تعدل `conversations` أو `messages` ضمن PR 1.
+- لا تفتح `/contacts` قبل PR 2.
+- لا تبدأ Analytics قبل تثبيت Contacts identity semantics.
 - لا تضف Instagram/Facebook integration.
 - لا تعمم `whatsapp_connections` قبل وجود قناة ثانية فعلية.
-- لا تعمل merge تلقائي للعملاء.
-- لا تحذف `customers` أو Conversations history.
-- لا توسع PR 1 إلى CRM features أو Analytics.
+- لا تعمل Contact merge تلقائيًا.
+- لا تحذف `customers` أو customer history.
+- لا تبدأ PR 2 بدون مراجعة current `main` ووضع Technical Plan خاص به.
