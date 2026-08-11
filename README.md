@@ -26,6 +26,11 @@
 6. [PROBLEMS_AND_SOLUTIONS.md](PROBLEMS_AND_SOLUTIONS.md)
 7. [CHANGELOG.md](CHANGELOG.md)
 8. [BLOCKERS.md](BLOCKERS.md)
+9. [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) — قواعد تطوير الذاكرة نفسها، ADRs، Mermaid، والأتمتة المستقبلية.
+
+وللمهام المعمارية المتخصصة، اقرأ الملف الخاص بالنظام، مثل:
+
+- [CONTACTS_ARCHITECTURE.md](CONTACTS_ARCHITECTURE.md)
 
 ## الروابط الأساسية
 
@@ -43,6 +48,9 @@
 - أضف القرار إلى `DECISIONS.md` إذا كان معماريًا أو تجاريًا.
 - حدّث `BLOCKERS.md` إذا ظهر أو اختفى عائق.
 - أضف المشكلة وحلها إلى `PROBLEMS_AND_SOLUTIONS.md` إذا كانت تستحق الاحتفاظ بها.
+- اتبع [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) عند إضافة ADRs أو مخططات أو أتمتة للذاكرة.
+
+الذاكرة ليست نسخة ثانية من Git history. نسجل التغييرات والقرارات التي يحتاجها شخص أو مساعد جديد لفهم المنتج واستكماله دون إعادة بناء السياق من الصفر.
 
 ## ملاحظة أمنية
 
