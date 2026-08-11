@@ -2,6 +2,57 @@
 
 > التواريخ أدناه تسجل مراحل المنتج الأساسية، وليست كل commit صغير.
 
+## 2026-08-11
+
+### اعتماد Contacts Foundation تقنيًا
+
+- تم اعتماد `CONTACTS_ARCHITECTURE.md` كخطة WhatsApp-first, Channel-ready.
+- تم إجراء Technical Audit كامل على `main` بواسطة Codex دون تعديل أي ملف.
+- تم اعتماد `CONTACTS_TECHNICAL_SPEC.md` لـContacts PR 1 — Foundation.
+- تمت مراجعة التصميم بشكل مستقل عبر DeepSeek، وتم اعتماد ملاحظاته المتعلقة بالـpreflight، PR1→PR2 gap، وحجم migration الفعلي.
+
+### Production Contacts Preflight — GO
+
+تم تنفيذ mandatory read-only preflight على Production قبل أي Contacts migration.
+
+النتيجة:
+
+- verdict: **GO**
+- total customers: **1**
+- workspaces with customers: **1**
+- customer-linked WhatsApp connections: **1**
+- workspace/connection mismatches: **0**
+- missing `phone_number_id` account scope: **0**
+- canonical identity collision groups: **0**
+- WhatsApp ID null/empty/whitespace/length anomalies: **0**
+- normalized identity collisions: **0**
+- legacy mapping violations: **0**
+- missing `profile_name`: **0**
+- missing `phone_number_normalized`: **0**
+- connection state: `connected` × 1
+
+Migration size was classified as **Tiny**.
+
+Approved consequence:
+
+- simple transactional backfill is appropriate;
+- batching is not required;
+- online/concurrent index construction is not required;
+- no remediation is required before PR 1;
+- Contacts PR 1 implementation is now authorized.
+
+The preflight modified no files, schema, production data, migrations, or configuration.
+
+Reference: `CONTACTS_PRODUCTION_PREFLIGHT.md`.
+
+### Contacts PR sequencing confirmed
+
+- PR 1: schema/RLS/backfill/tests only.
+- PR 2: immediately follow with WhatsApp ingestion dual-write + idempotent catch-up backfill.
+- PR 2 must close the ingestion race before final catch-up validation.
+- `/contacts` remains disabled until PR 2 proves complete Contact coverage.
+- PR 3: Contacts MVP UI only after PR 2.
+
 ## 2026-08-09
 
 ### دمج PR #36 — Meta administrator testing readiness + Vercel WIF
