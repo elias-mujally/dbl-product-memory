@@ -6,19 +6,18 @@
 
 DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup أصبح جاهزًا تقنيًا للاختبار الإداري بعد دمج PR #36 والتحقق الإنتاجي الناجح.
 
-التركيز الحالي انتقل إلى **Contacts Foundation** قبل Analytics.
+التركيز الحالي هو **Contacts Foundation** قبل Analytics.
 
-تم اعتماد:
+تم اعتماد وإنجاز:
 
 - Product architecture لميزة Contacts.
 - UX direction للـContacts MVP.
 - Technical audit كامل على `main`.
 - Technical Specification لـContacts PR 1.
-- مراجعة مستقلة من DeepSeek وافقت على التصميم مع شروط preflight/rollout.
+- مراجعة مستقلة من DeepSeek وافقت على التصميم.
+- **Production Contacts Preflight قراءة فقط: GO.**
 
-**التنفيذ لم يبدأ بعد.**
-
-الخطوة التالية هي **Read-only Production Contacts Preflight** كـGo/No-Go gate قبل أي migration.
+**Contacts PR 1 — Foundation أصبح مصرحًا ببدء تنفيذه.**
 
 ## الإنتاج الحالي
 
@@ -107,27 +106,56 @@ Provider display name يستطيع تحديث Contact name فقط إذا كان 
 
 أي manual name مستقبلي له أولوية.
 
-## Production Preflight — الخطوة التالية
+## Production Contacts Preflight — PASSED
 
-لا يبدأ PR 1 implementation قبل فحص Production قراءة فقط يثبت:
+المرجع:
 
-1. customer row count وحجم migration المتوقع.
-2. zero customer workspace / WhatsApp connection workspace mismatches.
-3. zero customers attached to connections without `phone_number_id`.
-4. zero proposed identity collisions بعد normalization المطلوبة.
-5. عدم وجود anomaly تحتاج remediation خاصة.
+`CONTACTS_PRODUCTION_PREFLIGHT.md`
 
-إذا ظهر أي anomaly:
+### النتيجة
 
-**STOP.**
+**GO**
 
-لا auto-fix، لا auto-merge، ولا normalization صامت.
+### Production data observed
 
-يجب تصميم remediation مستقلة أولًا.
+- total customers: **1**
+- workspaces with customers: **1**
+- customer-linked WhatsApp connections: **1**
+- connected: **1**
+
+### Blocking anomaly checks
+
+- customer/workspace vs connection/workspace mismatches: **0**
+- customers linked to connection missing `phone_number_id`: **0**
+- proposed canonical identity collision groups: **0**
+- WhatsApp user ID null/empty/whitespace/length anomalies: **0**
+- normalized identity collisions: **0**
+- duplicate legacy customer mapping violations: **0**
+- missing `profile_name`: **0**
+- missing `phone_number_normalized`: **0**
+
+### Migration sizing
+
+**Tiny**.
+
+المعتمد حاليًا:
+
+- straightforward transactional backfill مناسب.
+- batching غير مطلوب.
+- online/concurrent index strategy غير مطلوب.
+- monitoring infrastructure خاص بالـbackfill غير مطلوب بهذا الحجم.
+
+إذا تغير حجم Production ماديًا قبل التنفيذ يجب إعادة تقييم هذا الحكم.
+
+### PR 1 authorization
+
+بما أن preflight عاد بـzero blockers:
+
+> **Contacts PR 1 — Foundation may begin using the approved Technical Specification unchanged unless implementation reveals a new concrete blocker.**
 
 ## PR sequencing المعتمد
 
-### PR 1 — Contacts Foundation
+### PR 1 — Contacts Foundation — NEXT
 
 - schema + RLS + backfill + tests فقط.
 - additive / forward-only.
@@ -141,6 +169,7 @@ Provider display name يستطيع تحديث Contact name فقط إذا كان 
 - dual-write / create-link Contact + identity من ingestion.
 - catch-up backfill للعملاء الذين ظهروا بين PR 1 وPR 2.
 - duplicate/idempotency/concurrency coverage.
+- إغلاق ingestion race قبل final catch-up validation.
 
 ### PR 3 — Contacts MVP UI
 
@@ -161,45 +190,46 @@ Provider display name يستطيع تحديث Contact name فقط إذا كان 
 
 ## Performance rule
 
-تعقيد backfill يتحدد من Production preflight:
+تعقيد backfill يتحدد من Production data الفعلية.
 
-- data صغيرة/متوسطة → migration بسيطة.
-- volume أو lock/WAL risk ملحوظ → إعادة تصميم rollout/batching قبل التنفيذ.
-
-لا نبني مراقبة أو batching معقدة من باب الاحتياط النظري فقط.
+Preflight الحالي يصنف الحجم **Tiny**، لذلك لا نضيف batching/monitoring معقدًا بلا حاجة.
 
 ## Independent review
 
 ### Codex
 
 - audit read-only كامل.
-- PR 1 risk: **4/10 — Low-to-medium**.
-- recommendation: implementation conditionally ready after production preflight.
+- PR 1 risk قبل preflight: **4/10 — Low-to-medium**.
+- Production preflight: **GO**.
+- implementation authorization: yes.
 
 ### DeepSeek
 
 - وافق على architecture/technical audit.
-- أكد ضرورة حسم open decisions.
 - أكد preflight كـGo/No-Go.
 - أوصى بإبقاء PR 2 قريبًا جدًا من PR 1.
 - أوصى بمراقبة migration proportional to actual volume.
 
-تم اعتماد هذه التوصيات.
+تم اعتماد هذه التوصيات، ونتيجة Production الحالية لا تستدعي batching أو migration-monitoring infrastructure إضافية.
 
 ## الخطوة التالية حرفيًا
 
-1. إعطاء Codex مهمة **Production Contacts Preflight — Read Only**.
-2. عدم تعديل أي file/schema/config/data أثناءها.
-3. مراجعة نتائج counts/anomalies.
-4. إذا zero blockers → إعطاء الضوء الأخضر لتنفيذ **Contacts PR 1 Foundation**.
-5. إذا anomaly → توقف وتصميم remediation قبل أي migration.
+1. إعطاء Codex مهمة تنفيذ **Contacts PR 1 — Foundation**.
+2. إنشاء Draft PR فقط، بلا دمج أو نشر يدوي.
+3. الالتزام بحدود `CONTACTS_TECHNICAL_SPEC.md`.
+4. تشغيل migration-upgrade tests وpgTAP/RLS/regression suites.
+5. self-review نقدي.
+6. إصلاح أي High/Medium findings.
+7. independent final review قبل squash merge.
+8. بعد PR 1، الانتقال بسرعة إلى PR 2 لإغلاق dual-write/catch-up gap قبل أي Contacts UI.
 
 ## لا تفعل الآن
 
-- لا تبدأ Contacts migration قبل preflight.
-- لا تفتح `/contacts` UI.
+- لا تفتح `/contacts` UI داخل PR 1.
 - لا تعدل WhatsApp ingestion ضمن PR 1.
+- لا تعدل `conversations` أو `messages` ضمن PR 1.
 - لا تضف Instagram/Facebook integration.
 - لا تعمم `whatsapp_connections` قبل وجود قناة ثانية فعلية.
 - لا تعمل merge تلقائي للعملاء.
 - لا تحذف `customers` أو Conversations history.
+- لا توسع PR 1 إلى CRM features أو Analytics.
