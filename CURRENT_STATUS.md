@@ -4,273 +4,230 @@
 
 ## ملخص سريع
 
-DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp/Meta Embedded Signup جاهز تقنيًا للاختبار الإداري في Production بينما تبقى موافقات Meta التجارية الخارجية مسارًا منفصلًا.
+DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp integration يمر حاليًا بمرحلة إصلاح Production foundation قبل متابعة Contacts PR 2.
 
-التركيز الحالي هو **Contacts** قبل Analytics.
+تم إغلاق **Contacts PR 1 — Foundation** بالكامل، وتم دمج **PR #38 — WhatsApp Account-Scope Lifecycle Guard** بنجاح.
 
-تم إغلاق **Contacts PR 1 — Foundation** بالكامل، وتم الآن دمج **PR #38 — WhatsApp Account-Scope Lifecycle Guard** كمتطلب سابق لـContacts PR 2.
+بعد الاختبار اليدوي على Production تم اكتشاف مشاكل متأخرة، ثم أثبتت مراجعة read-only أن WhatsApp runtime الحالي منقسم فعليًا بين Cloud Run قديم وVercel الحالي.
 
 الحالة الحالية:
 
-> **PR #38 merged. Post-merge Production verification is the immediate next step. Contacts PR 2 has not started yet.**
+> **Contacts PR 2 is temporarily blocked. Next engineering task: PR A — WhatsApp credential/runtime readiness. Immediate Meta webhook cutover is NO-GO.**
 
 ---
 
-## الإنتاج الحالي
+## Production الحالي
 
-- Production: `https://dbl-employee-ai.vercel.app`
-- آخر main مؤكد قبل دمج #38: `64f25ae666d9cd2b62cd1caa37f9f9c2d2f84ae3`
-- PR #38 reviewed head: `1325412e13fbf8f8925127ec231d744f2a1d0caa`
-- PR #38 squash SHA: `57052f665150849c1040bc173a8aef3bb9b02ab8`
+- Production app: `https://dbl-employee-ai.vercel.app`
+- current GitHub `main`: `57052f665150849c1040bc173a8aef3bb9b02ab8`
+- current Vercel deployment: `dpl_5X9Jtqsb5qYkneNTsL4Dr4ZZVcgB`
+- Vercel status: **READY**
 - PR #38: **MERGED via squash**
-- Production verification لـ#38: **pending**
-
-مرجع الحدث:
-
-`events/2026-08-12-pr38-whatsapp-account-scope-guard-merged.md`
 
 ---
 
-## Contacts — الاتجاه المعتمد
+## Confirmed split-runtime
 
-**WhatsApp-first, Channel-ready**.
+Read-only Production confirmation on 2026-08-12 proved:
 
-- WhatsApp هو القناة الوحيدة المدعومة الآن.
-- Contact كيان مستقل عن WhatsApp customer على المدى الطويل.
-- Future channels تبقى ممكنة دون تنفيذها الآن.
-- WhatsApp provider infrastructure تبقى WhatsApp-specific حاليًا ولا يتم تعميمها مبكرًا.
+```text
+Meta inbound webhook
+→ legacy Cloud Run service/revision
+→ historical static receipt responder
 
-المراجع:
+Current DBL UI / server actions
+→ Vercel current main
+→ modern outbound / AI / Embedded Signup code
+```
 
-- `CONTACTS_ARCHITECTURE.md`
-- `CONTACTS_TECHNICAL_SPEC.md`
-- `CONTACTS_PRODUCTION_PREFLIGHT.md`
-- `events/2026-08-11-pr37-contacts-foundation-merged.md`
-- `events/2026-08-12-pr38-whatsapp-account-scope-guard-merged.md`
+### Meta webhook ownership
+
+Classification:
+
+`CONFIRMED_LEGACY_CLOUD_RUN`
+
+The active Meta WhatsApp callback is still the old Cloud Run endpoint, not the canonical Vercel webhook.
+
+Cloud Run service:
+
+`dbl-employee-ai-git`
+
+Serving traffic:
+
+- revision `00024`: **100%**
+- newer revision built from current main: **0%**
+
+The 100%-serving revision contains the retired static responder:
+
+> تم استلام رسالتك بنجاح من DBL Employee AI ✅
+
+Recent read-only Cloud Run logs confirmed five HTTP 200 POST requests to `/api/webhooks/whatsapp` during the manual testing window.
+
+Reference:
+
+`events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
 
 ---
 
-## Contacts PR 1 — CLOSED
+## Late-discovered production issues
 
-### Merge
+Reference:
 
-- PR: **#37**
-- الحالة: **MERGED via squash**
-- reviewed head: `9de793fd0c9d2cfb0fa55f35b85ebbe8ed4f614d`
-- squash/main SHA: `64f25ae666d9cd2b62cd1caa37f9f9c2d2f84ae3`
+`LATE_DISCOVERED_ISSUES.md`
 
-### Migration
+### LDI-001 — Static WhatsApp acknowledgement
 
-Repository source:
+**Root cause: CONFIRMED.**
 
-`20260811183306_contacts_foundation.sql`
+The old Cloud Run callback/revision is still handling inbound Meta traffic and still contains `receipt-reply.ts`.
 
-Production execution version:
+Important correction:
 
-`20260811195845`
+The static acknowledgement itself does **not** invoke AI and consumes **0 AI tokens**. Any later AI run is a separate operation.
 
-- applied exactly once
-- no unrelated migration applied
-- no preflight / lock / constraint error
-- historical local/remote migration-ledger divergence remains separate operational debt and was not repaired
+Status:
 
-### New canonical foundation
+**Awaiting PR A + PR B + controlled webhook cutover.**
 
-تم إنشاء:
+### LDI-002 — Embedded Signup authorization incomplete
+
+**Failure stage confirmed; exact external/browser root cause still open.**
+
+Proven path:
+
+```text
+SDK ready
+→ prepared state ready
+→ synchronous FB.login called
+→ callback returned without authResponse.code
+→ authorization_incomplete
+→ no completion mutation
+```
+
+Status:
+
+**Planned PR B after PR A.**
+
+Testing-mode Meta notice should remain truthful but become low-prominence/contextual rather than a permanent alarming banner.
+
+### LDI-003 — Manual outbound failure
+
+**Root cause: CONFIRMED.**
+
+Active Production connection still references legacy credential location:
+
+`env:WHATSAPP_ACCESS_TOKEN`
+
+Current Vercel outbound runtime expects the modern Secret Manager/WIF path.
+
+The manual-send path fails during provider construction before Meta Graph API request with safe category:
+
+`provider_configuration_missing`
+
+Status:
+
+**High — next repair target in PR A.**
+
+### LDI-004 — Onboarding response-mode impossible state
+
+**Root cause: CONFIRMED.**
+
+Persisted `automatic_replies_enabled=true` can coexist with live readiness that makes Automatic ineligible. The form then renders Automatic checked + disabled; disabled controls are omitted from form submission, causing `mode_invalid` on activation.
+
+Status:
+
+**High — planned PR C.**
+
+---
+
+## Immediate webhook cutover decision
+
+**NO-GO.**
+
+Risk score: **8/10 High**.
+
+Reason:
+
+- Vercel inbound verification/persistence is expected to work;
+- moving Meta callback now would remove the obsolete static acknowledgement;
+- however the current Vercel outbound path still cannot use the legacy credential reference;
+- customers could therefore have inbound messages stored successfully but receive no reply.
+
+Do not change Meta callback until PR A and PR B are complete and outbound readiness is proven.
+
+---
+
+## Approved repair sequence
+
+### PR A — WhatsApp credential/runtime readiness — NEXT
+
+Goals:
+
+- distinguish legacy credential state from modern Secret Manager readiness;
+- add privacy-safe provider-construction diagnostics;
+- stop representing an unusable legacy connection as fully outbound-ready;
+- prepare the safe same-number credential transition;
+- verify manual and automatic outbound readiness;
+- no Meta webhook cutover inside this PR.
+
+### PR B — Embedded Signup Production diagnostics and recovery
+
+Goals:
+
+- safe SDK/login callback telemetry;
+- reproduce Production callback-without-code safely;
+- make same-number reconnect reliably executable;
+- contextualize testing-stage Meta notice;
+- no provider asset mutation in automated tests.
+
+### Controlled operational webhook cutover
+
+Only after PR A + PR B:
+
+- verify Vercel GET challenge and POST signature handling;
+- confirm modern credential is readable;
+- prove manual outbound;
+- change Meta callback in an approved operational window;
+- confirm signed inbound reaches Vercel;
+- preserve old Cloud Run callback/revision temporarily for rollback;
+- retire legacy responder only after Vercel path is verified.
+
+### PR C — Onboarding response-mode state machine
+
+Goals:
+
+- recoverable controlled response-mode selection;
+- no checked+disabled invalid state;
+- shared readiness authority between UI and activation;
+- preserve selection across errors/reload;
+- safe employee-test outcome categories.
+
+### Contacts PR 2
+
+Resume only after messaging foundation is healthy and the operational cutover is production-verified.
+
+---
+
+## Contacts foundation remains intact
+
+Contacts PR 1 remains closed and production-verified:
 
 - `contacts`
 - `contact_channel_identities`
+- legacy compatibility via `legacy_customer_id`
+- Contacts UI remains disabled
+- no Contacts PR 2 dual-write has started
 
-القواعد الأساسية:
-
-- Contact primary ID = DBL internal UUID.
-- `channel='whatsapp'` فقط حاليًا.
-- WhatsApp account scope = receiving `phone_number_id` snapshot.
-- uniqueness:
-
-```text
-workspace_id + channel + channel_account_external_id + external_user_id
-= one Channel Identity
-```
-
-- legacy compatibility عبر `contact_channel_identities.legacy_customer_id`.
-- `customers` بقي موجودًا.
-- `conversations` لم تتغير.
-- `messages` لم تتغير.
-- WhatsApp ingestion behavior لم يتغير في PR 1.
-- outbound/AI لم يتغيرا.
-
-### Production backfill verification
-
-بعد migration:
-
-- legacy customers: **1**
-- canonical Contacts: **1**
-- compatibility identities: **1**
-- customers بدون identity: **0**
-- orphan Contacts: **0**
-- orphan identities: **0**
-- cross-workspace / relationship mismatches: **0**
-
-Legacy preservation:
-
-- customers: **1**
-- conversations: **1**
-- messages: **17**
-
-لم يُحذف أي historical customer/conversation/message.
-
----
-
-## PR #38 — WhatsApp Account-Scope Lifecycle Guard — MERGED / VERIFY NEXT
-
-### لماذا كان مطلوبًا
-
-أثناء تخطيط Contacts PR 2 اكتشف audit أن Embedded Signup كان يستطيع إعادة استخدام `whatsapp_connections` وتغيير receiving `phone_number_id` in-place، بينما Contacts Foundation تعتبر هذا الرقم account scope تاريخيًا لهوية WhatsApp.
-
-تم اعتماد السياسة:
-
-> بمجرد امتلاك الاتصال customer history أو canonical Contact identity history، لا يجوز استبدال `phone_number_id` الخاص به in-place. إعادة ربط الرقم نفسه مسموحة. رقم مختلف يحتاج مستقبلًا account scope/connection منفصلًا، بدون automatic Contact merge.
-
-### السلوك النهائي
-
-- new connection: unchanged.
-- same `phone_number_id`: allowed.
-- different `phone_number_id` without history: existing behavior allowed.
-- different number with customer أو canonical identity history: transactionally rejected.
-- Contacts/identities/customers/conversations/messages/history محفوظة.
-- multi-connection غير مدعوم بعد، لذلك لا يتم وعد المستخدم بمسار غير موجود.
-
-### أهم المشاكل التي اكتشفت أثناء المراجعات وأغلقت
-
-- stale credential predecessor race.
-- service-level concurrency test gap.
-- misleading separate-connection recovery copy.
-- ambiguous committed RPC response deleting active credential.
-- non-durable `NOT_COMMITTED` classification.
-
-الحل النهائي لـ`NOT_COMMITTED`:
-
-- reconciliation يقفل signup session.
-- confirmed non-commit يحول session من `completing` إلى terminal `failed`.
-- reason: `whatsapp_completion_reconciled_not_committed`.
-- بعد commit هذا fence فقط يسمح candidate cleanup.
-- delayed/retried completion لا يستطيع العودة للـcommit لأنه يحتاج `status='completing'`.
-
-### Final review
-
-Reviewed head:
-
-`1325412e13fbf8f8925127ec231d744f2a1d0caa`
-
-نتيجة المراجعة النهائية:
-
-- High: **0**
-- Medium: **0**
-- Production risk: **Low**
-- T1–T7 concurrency: passed
-- service-contract tests: passed
-- Vitest: 464 passed
-- pgTAP: 466 passed
-- Supabase reset / Contacts upgrade / authenticated E2E / Vercel Preview: passed
-
-### Merge
-
-- squash SHA: `57052f665150849c1040bc173a8aef3bb9b02ab8`
-- merge confirmed by GitHub.
-
-### Remaining Low operational debt
-
-- reconciled ACTIVE after lost response may leave predecessor credential for manual protected cleanup.
-- credential cleanup is observable but no durable automatic retry queue exists yet.
-- Meta-side activation may precede DBL rejection while DBL state remains fail-closed.
-
-### Immediate next step
-
-**Post-merge Production verification لـPR #38.**
-
-لا تعتبر #38 production-closed حتى نثبت:
-
-- migrations applied exactly once/in order;
-- Production deployment READY on squash SHA;
-- no migration/RPC/runtime/5xx cluster;
-- existing WhatsApp history/credentials remain intact;
-- role restrictions and account-scope guard remain correct.
-
----
-
-## Known PR 1 → PR 2 gap
-
-PR 1 deliberately did not change ingestion.
-
-Therefore a customer created after PR 1 migration and before PR 2 integration may temporarily lack canonical Contact/identity.
-
-آخر verified count قبل #38:
-
-**0 unmapped post-migration customers**
-
-The gap remains safe only because Contacts runtime/UI is disabled.
-
-Operational rule:
-
-- بعد إغلاق Production verification لـ#38، نعود مباشرة إلى PR 2.
-- PR 2 must add atomic create/link dual-write behavior.
-- PR 2 must include idempotent catch-up backfill.
-- PR 2 must close the ingestion race before final catch-up validation.
-- `/contacts` must remain disabled until PR 2 proves complete canonical coverage.
-
----
-
-## Contacts PR 2 — NEXT AFTER PR #38 PRODUCTION VERIFICATION
-
-Goal:
-
-**WhatsApp Contact Integration**
-
-Expected scope:
-
-- integrate canonical Contact + Channel Identity creation/linking into WhatsApp ingestion;
-- preserve existing customer/conversation/message behavior;
-- close retries/concurrency duplication risk;
-- perform catch-up for customers created after PR 1;
-- prove one intended WhatsApp identity maps to one canonical identity;
-- preserve provider data precedence rules;
-- keep Contacts UI disabled;
-- no Instagram/Facebook integration;
-- no legacy removal yet.
-
-The PR 2 technical audit already identified database-enforced dual-write as the preferred architecture, but implementation remains blocked until PR #38 is production-verified and Product Memory is updated again.
-
----
-
-## Later sequencing
-
-### PR 3 — Contacts MVP UI
-
-Only after PR 2 is production-verified:
-
-- `/contacts`
-- `/contacts/[contactId]`
-- search/pagination
-- Arabic/English
-- desktop/mobile
-- read-only customer-memory UX
-
-### PR 4 — Legacy reduction later
-
-After the canonical path is proven in Production, independently review the future role of `customers`.
-
-No pre-approved requirement exists to delete it.
+The temporary PR1→PR2 gap remains acceptable only while Contacts runtime/UI remains disabled.
 
 ---
 
 ## لا تفعل الآن
 
-- لا تبدأ Contacts PR 2 قبل Production verification لـ#38.
-- لا تفتح `/contacts` قبل PR 2.
-- لا تبدأ Analytics قبل تثبيت Contacts identity semantics.
-- لا تضف Instagram/Facebook integration.
-- لا تعمم `whatsapp_connections` قبل وجود قناة ثانية فعلية.
-- لا تعمل Contact merge تلقائيًا.
-- لا تحذف `customers` أو customer history.
-- لا تعتبر PR #38 production-closed قبل التحقق الإنتاجي.
+- لا تغيّر Meta webhook callback الآن.
+- لا توقف Cloud Run القديم الآن.
+- لا تعمل blind retry للإرسال اليدوي قبل إصلاح credential readiness.
+- لا تبدأ Contacts PR 2.
+- لا تفتح Contacts UI.
+- لا تنقل legacy token values يدويًا إلى التطبيق.
+- لا تعتبر split-runtime مجرد hypothesis بعد الآن؛ أصبح مثبتًا.
