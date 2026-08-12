@@ -13,146 +13,220 @@
 
 ## 2026-08-12 — Production manual testing after PR #38 merge
 
-تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. هذه الملاحظات هي **أعراض مؤكدة من الاستخدام اليدوي**، لكن الأسباب الجذرية لم تُثبت بعد ويجب عدم افتراضها قبل Production Bug Audit.
+تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. بعد Production Bug Audit ثم read-only confirmation إضافي، أصبحت بعض الأسباب الجذرية مثبتة وبعضها ما زال مفتوحًا.
+
+مرجع التأكيد الخارجي:
+
+`events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
 
 ### LDI-001 — رد WhatsApp الاختباري الثابت ما زال يعمل بدل الرد المتوقع
 
-**الحالة:** Open — root cause not yet confirmed.
+**الحالة:** Confirmed root cause — awaiting PR A/PR B ثم controlled webhook cutover.
 
 **المشاهدة:**
 
-عند إرسال رسائل مختلفة إلى رقم WhatsApp المرتبط، يصل الرد نفسه في كل مرة:
+عند إرسال رسائل مختلفة إلى رقم WhatsApp المرتبط، يصل الرد نفسه:
 
 > تم استلام رسالتك بنجاح من DBL Employee AI ✅
 
-هذا الرد كان قد أُنشئ سابقًا كرسالة اختبار للتأكد من وصول رسائل WhatsApp إلى DBL.
+**السبب الجذري المثبت:**
 
-**ملاحظة مهمة من الاختبار اليدوي:**
+Meta WhatsApp webhook ما زال يشير إلى Cloud Run القديم بدل Vercel الحالي.
 
-لوحظ كذلك أن النظام يحتسب العملية على أنها رد AI/يستهلك من حساب API المرتبط رغم أن النص المرسل ثابت وليس جوابًا مولدًا ظاهرًا للمستخدم.
+التأكيد الإنتاجي أثبت:
 
-**المخاطر المحتملة:**
+- active Meta callback = Cloud Run legacy target.
+- Cloud Run service `dbl-employee-ai-git` يرسل **100%** من traffic إلى revision قديمة `00024`.
+- serving revision مبنية من source commit يحتوي `receipt-reply.ts` والرد الثابت.
+- recent POST requests إلى `/api/webhooks/whatsapp` وصلت إلى نفس serving revision أثناء نافذة الاختبار اليدوي.
+- current Vercel/main لا يحتوي النص الثابت أصلًا.
 
-- سلوك WhatsApp غير صحيح للمستخدم النهائي.
-- احتمال تشغيل AI generation دون استخدام الناتج.
-- احتمال تكلفة API غير لازمة.
-- metrics قد تصنف رد الاختبار كـAI response بصورة مضللة.
+**تصحيح مهم بخصوص AI:**
 
-**المطلوب قبل الإصلاح:**
+الرد الثابت نفسه لا يستدعي AI ولا Gemini/Vertex ولا grounding، وبالتالي يستهلك **0 AI tokens**. أي AI events ظهرت لاحقًا كانت عمليات منفصلة وليست جزءًا من الرد الثابت.
 
-- تتبع كامل لمسار inbound message → AI generation → automatic/simple reply → outbound send.
-- تحديد المصدر الفعلي للنص الثابت.
-- إثبات ما إذا كان استدعاء AI يحدث فعلًا لكل رسالة ولماذا.
-- عدم حذف أو تعطيل أي مسار قبل فهم الاعتماد الحالي عليه.
+**المشكلة المعمارية الأوسع:**
 
-**الأولوية الأولية:** P0/P1 — تحتاج audit عاجل قبل Contacts PR 2.
+تم إثبات split-runtime:
+
+```text
+Inbound Meta webhook
+→ legacy Cloud Run
+→ historical receipt responder
+
+Current UI/server actions
+→ Vercel current main
+→ modern outbound / AI / Embedded Signup
+```
+
+**الخطر:** High.
+
+**قرار التشغيل:**
+
+لا يتم تغيير Meta callback الآن. immediate cutover = **NO-GO** حتى يصبح outbound/credential path الحديث جاهزًا.
 
 ---
 
 ### LDI-002 — Embedded Signup لا يفتح Meta ويعرض فشل تفويض
 
-**الحالة:** Open — root cause not yet confirmed.
+**الحالة:** Open — exact Meta/browser cause not yet confirmed; planned PR B.
 
 **المشاهدة:**
 
-في صفحة ربط WhatsApp، عند محاولة الضغط على زر الربط لا ينتقل المستخدم إلى واجهة Meta ويظهر تنبيه:
+عند محاولة الربط يظهر:
 
 > تعذر إكمال الاتصال
 >
 > لم تعد Meta نتيجة تفويض مكتملة. ابدأ محاولة الربط من جديد.
 
-وفي الاختبار الحالي يبقى المستخدم داخل نفس صفحة DBL بدل فتح/إكمال تدفق Meta.
+**ما تم إثباته:**
 
-**متطلب UX إضافي:**
+- SDK readiness passed.
+- prepared state existed.
+- `FB.login` was invoked synchronously from the user click.
+- callback returned without `authResponse.code`.
+- server-side completion did not begin.
+- application mapped the outcome to `authorization_incomplete`.
+- PR #38 did not introduce the browser sequencing issue.
 
-بانر/شعار `وضع اختبار موافقات Meta` لم يعد مرغوبًا ظهوره بهذه الصورة في واجهة الاستخدام الحالية ويجب مراجعته ضمن إصلاح تجربة الصفحة، دون تزوير حالة موافقات Meta الفعلية.
+**ما لم يُثبت بعد:**
 
-**المخاطر المحتملة:**
+السبب الخارجي/المتصفحي الدقيق لعودة callback ناقصًا.
 
-- تعطل ربط WhatsApp بالكامل للمستخدم.
-- prepared-state / SDK / authorization-result lifecycle قد يكون غير متناسق.
-- احتمال regression بعد تغييرات Embedded Signup / PR #38، لكن هذا غير مثبت بعد.
+فرضيات ما زالت تحتاج reproduction منضبط:
 
-**المطلوب قبل الإصلاح:**
+- Production JSSDK origin/domain authorization state.
+- Meta login/session/cookie state.
+- browser popup/privacy behavior.
 
-- فحص browser flow وFacebook SDK readiness وprepared state.
-- فحص session state والـserver actions.
-- فحص runtime/Vercel logs ذات الصلة.
-- تحديد إن كان الفشل قبل `FB.login` أو بعده أو عند معالجة النتيجة.
-- عدم افتراض أن Meta نفسها هي السبب قبل إثبات ذلك.
+**بانر وضع اختبار موافقات Meta:**
 
-**الأولوية الأولية:** P1.
+لا يُحذف كليًا ما دامت الموافقات التجارية الخارجية غير مكتملة، لكن يجب تحويله إلى owner/admin contextual notice منخفض البروز بدل warning دائم يوحي بأن التكامل مكسور.
+
+**الأولوية:** Medium / PR B بعد PR A.
 
 ---
 
 ### LDI-003 — الإرسال اليدوي من صفحة المحادثة يفشل
 
-**الحالة:** Open — root cause not yet confirmed.
+**الحالة:** Confirmed root cause — awaiting PR A.
 
 **المشاهدة:**
 
-من صفحة المحادثة داخل DBL، بعد مراجعة النص والموافقة على الإرسال إلى WhatsApp، تفشل محاولة الإرسال وتظهر رسالة:
+الإرسال اليدوي ينتهي بمحاولة فاشلة ورسالة:
 
 > تعذر إرسال الرسالة. حاول مرة أخرى.
 
-واجهة المحادثة تسجل محاولة إرسال فاشلة.
+**السبب الجذري المثبت:**
 
-**المخاطر المحتملة:**
+Production connection ما زالت تشير إلى legacy credential location:
 
-- outbound manual messaging غير صالح للاستخدام.
-- قد توجد مشكلة في credential resolution أو connection state أو provider send path أو authorization/reservation path.
-- هذه المشكلة تجعل تقييم سلامة WhatsApp integration الحالي غير مكتمل حتى لو كان inbound يعمل.
+`env:WHATSAPP_ACCESS_TOKEN`
 
-**المطلوب قبل الإصلاح:**
+بينما Vercel runtime الحالي يعتمد modern Secret Manager/WIF credential path.
 
-- تتبع manual send end-to-end.
-- فحص outbound reservation/attempt/provider call والـcredential store.
-- ربط محاولة الفشل بالسجلات الآمنة دون كشف PII أو secrets.
-- مقارنة المسار الحالي مع trusted outbound routing والاختبارات الموجودة.
+المسار يصل إلى provider construction ثم يفشل قبل Meta Graph API request.
 
-**الأولوية الأولية:** P0/P1 — يجب فهمها قبل مواصلة توسعة WhatsApp integration.
+Safe failure category:
+
+`provider_configuration_missing`
+
+**الحالة الإنتاجية المؤكدة:**
+
+- connection status = connected.
+- receiving account scope موجود ومتسق.
+- credential reference موجود لكنه legacy environment-based.
+- لا evidence على corruption من PR #38 credential lineage.
+- failed manual requests terminal وليست stuck/ambiguous.
+
+**قرار:**
+
+لا blind retry قبل إصلاح credential/runtime readiness أو نجاح same-number Embedded Signup transition إلى Secret Manager credential.
+
+**الخطورة:** High.
 
 ---
 
 ### LDI-004 — Step 5 في إعداد الموظف الذكي يدخل حالة Response Mode غير قابلة للاسترداد
 
-**الحالة:** Open — root cause not yet confirmed.
+**الحالة:** Confirmed UI/state-machine root cause — awaiting PR C.
 
 **المشاهدة:**
 
-في الخطوة الخامسة من إعداد الموظف الذكي:
+- Automatic يظهر selected ثم disabled.
+- التحويل إلى Review-only لا يسمح لاحقًا باستعادة Automatic.
+- activation يعيد `اختر وضع رد صالحاً`.
+- response test سبق أن أعاد نتيجة غير صالحة للتفعيل.
 
-- يظهر خيار `تلقائي` في البداية.
-- بعد تغييره إلى `المراجعة فقط` لا يمكن العودة إلى `تلقائي` لأن الخيار يصبح مقفلًا/disabled.
-- عند الضغط على `تفعيل مساحة العمل` تظهر رسالة تطلب اختيار وضع رد صالح رغم أن وضع الرد كان قد اختير في خطوة سابقة.
-- المستخدم لا يستطيع الرجوع بسهولة إلى الخطوة السابقة لإصلاح الحالة.
-- عند محاولة اختبار الرد في الخطوة السابقة فشل الاختبار أيضًا.
+**السبب الجذري المثبت:**
 
-**المخاطر المحتملة:**
+Production state يمكن أن يكون:
 
-- onboarding state machine تسمح بحالة UI معروضة لكنها غير صالحة داخليًا.
-- readiness/eligibility قد تمنع `automatic` دون تفسير أو recovery path واضح.
-- المستخدم يمكن أن يعلق في نهاية onboarding ولا يستطيع إكمال التفعيل.
+```text
+persisted automatic_replies_enabled = true
+current readiness = automatic ineligible
+rendered form = Automatic checked + disabled
+browser submission = disabled input omitted
+server receives mode missing
+→ mode_invalid
+```
 
-**المطلوب قبل الإصلاح:**
+الواجهة تستخدم readiness حية لتحديد eligibility بينما selected radio مشتق من persisted AI settings، ما يسمح بحالة checked-but-disabled مستحيلة عند الإرسال.
 
-- تدقيق state machine للخطوات 4 و5.
-- تحديد authority الفعلية لـresponse mode.
-- تدقيق شروط readiness التي تعطل `automatic`.
-- إثبات سبب فشل test reply.
-- ضمان back-navigation أو recovery path واضح عند وجود اختيار غير صالح.
+الـradio state غير controlled بما يكفي للحفاظ على recovery بعد server errors/reload.
 
-**الأولوية الأولية:** P1.
+**Response test:**
+
+المثبت أنه اكتمل لكنه أعاد `grounded=false`، وليس transport failure. السبب التفصيلي غير محفوظ حاليًا بما يكفي للتمييز بين insufficient knowledge / unsupported answer / grounding rejection أو نتيجة أخرى.
+
+**الخطورة:** High.
+
+**الإصلاح المتوقع:** PR C مستقل بعد تثبيت WhatsApp foundation أو بالتوازي دون خلط النطاقات.
+
+---
+
+## اكتشافات إضافية من Production Bug Audit
+
+### Provider diagnostics واسعة أكثر من اللازم
+
+عدة حالات مختلفة قد تنهار إلى:
+
+`provider_configuration_missing`
+
+مثل legacy config gap أو credential RPC/WIF/Secret Manager/malformed payload.
+
+يجب إضافة safe stage-specific diagnostics بدون PII/secrets.
+
+### AI diagnostics واسعة أكثر من اللازم
+
+Unexpected provider failures قد تنهار إلى `generation_failed`، ما يصعب إثبات failure stage أو cost behavior.
+
+### Simple-reply semantics تحتاج توحيد
+
+Product copy قد يوحي بأن deterministic conversational replies تعمل تلقائيًا، بينما review-only semantics تمنع automatic sending. يجب توحيد copy/runtime contract.
+
+### Readiness authority drift
+
+Onboarding UI وactivation/persisted settings لا تعتمد دائمًا authority واحدة، وهو سبب أوسع من radio bug المحدد.
 
 ---
 
 ## القرار التشغيلي الحالي
 
-حتى يتم تدقيق هذه المشاكل:
+Contacts PR 2 = **NO-GO مؤقتًا**.
 
-- لا تعتبر PR #38 مغلقًا إنتاجيًا بالكامل لمجرد نجاح الدمج.
-- لا يبدأ Contacts PR 2 قبل تحديد ما إذا كانت أي من هذه المشكلات regression أو خللًا قديمًا في WhatsApp/AI/onboarding runtime.
-- الخطوة التالية الموصى بها هي **Read-only Production Bug Audit** يجمع السبب الجذري لكل LDI-001 إلى LDI-004 قبل كتابة hotfixes.
+الترتيب المعتمد:
+
+1. **PR A — WhatsApp credential/runtime readiness**
+2. **PR B — Embedded Signup Production diagnostics and recovery**
+3. **Controlled operational Meta webhook cutover** من legacy Cloud Run إلى canonical Vercel
+4. **PR C — Onboarding response-mode state machine**
+5. Production verification
+6. بعدها فقط Resume Contacts PR 2
+
+Immediate webhook cutover risk: **8/10 High**، لأنه قد يجعل inbound يصل إلى Vercel بينما outbound ما زال غير قادر على الإرسال بسبب legacy credential reference.
+
+---
 
 ## قواعد هذا الملف
 
