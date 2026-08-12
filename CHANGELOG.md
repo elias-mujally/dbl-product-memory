@@ -2,6 +2,91 @@
 
 > التواريخ أدناه تسجل مراحل المنتج الأساسية، وليست كل commit صغير.
 
+## 2026-08-12
+
+### دمج PR #38 — WhatsApp Account-Scope Lifecycle Guard
+
+أثناء تخطيط Contacts PR 2 تم اكتشاف تعارض معماري بين Contacts Foundation ومسار WhatsApp reconnect الحالي:
+
+- Contacts Foundation تعتبر receiving `phone_number_id` account scope تاريخيًا لهوية WhatsApp.
+- Embedded Signup كان يستطيع إعادة استخدام `whatsapp_connections` وتغيير `phone_number_id` in-place.
+
+تم اعتماد السياسة التالية:
+
+> إذا امتلك اتصال WhatsApp customer history أو canonical Contact identity history، لا يجوز استبدال receiving `phone_number_id` الخاص به in-place. إعادة ربط الرقم نفسه تبقى مسموحة. رقم مختلف يحتاج مستقبلًا account scope/connection منفصلًا، بدون automatic Contact merge.
+
+### سلسلة المراجعات والإصلاحات
+
+PR #38 خضع لعدة دورات independent adversarial review واكتشف خلالها:
+
+- stale credential predecessor race تحت concurrent reconnects;
+- عدم كفاية service-level concurrency coverage;
+- recovery copy تعد المستخدم بميزة separate connection غير متاحة؛
+- ambiguous committed RPC response يمكن أن يحذف active credential بعد commit ناجح وضياع response؛
+- `NOT_COMMITTED` كان point-in-time observation وليس durable terminal assertion.
+
+الإصلاح النهائي:
+
+- transactional credential lineage تحت connection lock;
+- authoritative completion reconciliation؛
+- `ACTIVE` يحافظ على candidate ويعيد success؛
+- `INDETERMINATE` يحافظ على candidate بدون ادعاء success/failure؛
+- confirmed `NOT_COMMITTED` يقفل signup session بشكل durable بتحويل `completing → failed` مع السبب `whatsapp_completion_reconciled_not_committed`؛
+- candidate cleanup مسموح فقط بعد هذا terminal fence؛
+- delayed completion/retry لا يمكنه commit بعد fence؛
+- truthful Arabic/English recovery copy؛
+- service-level concurrency + fake credential-store coverage؛
+- T1–T7 concurrency scenarios.
+
+### Final independent review
+
+Exact reviewed head:
+
+`1325412e13fbf8f8925127ec231d744f2a1d0caa`
+
+Result:
+
+- High findings: `0`
+- Medium findings: `0`
+- Production risk: **Low**
+- Vitest: `464` passed
+- pgTAP: `466` passed
+- T1–T7 concurrency: passed
+- service-contract tests: `5` passed
+- Supabase reset: passed
+- Contacts upgrade harness: passed
+- authenticated E2E: passed
+- Vercel Preview: ready
+- secret/PII scan: passed
+
+### Merge
+
+- PR: **#38**
+- reviewed head: `1325412e13fbf8f8925127ec231d744f2a1d0caa`
+- squash SHA: `57052f665150849c1040bc173a8aef3bb9b02ab8`
+- merge method: squash with exact-head protection
+- GitHub confirmed successful merge
+
+### Remaining Low operational debt
+
+- reconciled ACTIVE after a lost lineage response may leave an obsolete predecessor credential for protected manual cleanup;
+- credential cleanup failures are observable but no durable retry queue exists yet;
+- Meta-side activation may happen before DBL rejects an account-scope replacement, while DBL state remains fail-closed.
+
+### Current stopping point
+
+PR #38 is merged but not yet marked production-closed.
+
+Next mandatory step:
+
+**Post-merge Production verification.**
+
+Do not begin Contacts PR 2 until verification confirms migrations/deployment/runtime/credentials/history are healthy.
+
+Reference:
+
+`events/2026-08-12-pr38-whatsapp-account-scope-guard-merged.md`
+
 ## 2026-08-11
 
 ### دمج PR #37 — Contacts Foundation
