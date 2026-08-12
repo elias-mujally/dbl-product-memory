@@ -8,6 +8,7 @@
 - الحالة الحالية الدقيقة.
 - تاريخ البناء والقرارات.
 - المشكلات التي ظهرت وكيف حُلّت.
+- المشكلات التي تُكتشف متأخرًا أثناء الاستخدام الفعلي قبل اكتمال تشخيصها.
 - العوائق الخارجية والتقنية.
 - نقطة التوقف الحالية لأي مساعد AI أو عضو فريق جديد.
 
@@ -24,9 +25,10 @@
 4. [ROADMAP.md](ROADMAP.md)
 5. [DECISIONS.md](DECISIONS.md)
 6. [PROBLEMS_AND_SOLUTIONS.md](PROBLEMS_AND_SOLUTIONS.md)
-7. [CHANGELOG.md](CHANGELOG.md)
-8. [BLOCKERS.md](BLOCKERS.md)
-9. [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) — قواعد تطوير الذاكرة نفسها، ADRs، Mermaid، والأتمتة المستقبلية.
+7. [LATE_DISCOVERED_ISSUES.md](LATE_DISCOVERED_ISSUES.md) — مشاكل ظهرت متأخرًا في الاستخدام الفعلي وما زالت قيد التدقيق أو الإصلاح.
+8. [CHANGELOG.md](CHANGELOG.md)
+9. [BLOCKERS.md](BLOCKERS.md)
+10. [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) — قواعد تطوير الذاكرة نفسها، ADRs، Mermaid، والأتمتة المستقبلية.
 
 وللمهام المعمارية المتخصصة، اقرأ الملف الخاص بالنظام، مثل:
 
@@ -47,7 +49,8 @@
 - أضف بندًا إلى `CHANGELOG.md`.
 - أضف القرار إلى `DECISIONS.md` إذا كان معماريًا أو تجاريًا.
 - حدّث `BLOCKERS.md` إذا ظهر أو اختفى عائق.
-- أضف المشكلة وحلها إلى `PROBLEMS_AND_SOLUTIONS.md` إذا كانت تستحق الاحتفاظ بها.
+- أضف المشكلة المفتوحة إلى `LATE_DISCOVERED_ISSUES.md` إذا اكتُشفت متأخرًا في الاستخدام الفعلي ولم يُثبت سببها أو حلها بعد.
+- بعد تأكيد السبب والحل والتحقق الإنتاجي، أضف الدرس إلى `PROBLEMS_AND_SOLUTIONS.md` وحدّث حالة المشكلة المتأخرة.
 - اتبع [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) عند إضافة ADRs أو مخططات أو أتمتة للذاكرة.
 
 الذاكرة ليست نسخة ثانية من Git history. نسجل التغييرات والقرارات التي يحتاجها شخص أو مساعد جديد لفهم المنتج واستكماله دون إعادة بناء السياق من الصفر.
