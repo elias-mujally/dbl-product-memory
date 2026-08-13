@@ -4,8 +4,8 @@
 
 الهدف ليس استبدال `PROBLEMS_AND_SOLUTIONS.md`، بل الفصل بين مرحلتين مختلفتين:
 
-- `LATE_DISCOVERED_ISSUES.md`: مشكلة مكتشفة متأخرًا، ما زالت قيد التشخيص/الإصلاح.
-- `PROBLEMS_AND_SOLUTIONS.md`: مشكلة فُهم سببها الجذري وحُلّت، مع حفظ الدرس النهائي.
+- `LATE_DISCOVERED_ISSUES.md`: مشكلة مكتشفة متأخرًا، ما زالت قيد التشخيص/الإصلاح/التحقق التشغيلي.
+- `PROBLEMS_AND_SOLUTIONS.md`: مشكلة فُهم سببها الجذري وحُلّت وتحققت إنتاجيًا، مع حفظ الدرس النهائي.
 
 كل مشكلة هنا يجب أن تنتقل لاحقًا إلى `PROBLEMS_AND_SOLUTIONS.md` بعد تأكيد السبب الجذري ودمج الإصلاح والتحقق الإنتاجي.
 
@@ -13,16 +13,17 @@
 
 ## 2026-08-12 إلى 2026-08-13 — Production manual testing repair track
 
-تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. بعد Production Bug Audit وread-only confirmations ودمج PR #39، أصبحت بعض الأسباب الجذرية مثبتة وبعض الإصلاحات البرمجية منجزة، بينما ما يزال التشغيل الفعلي يحتاج PR B وsame-number reconnect وcontrolled cutover.
+تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. بعد Production Bug Audit وread-only confirmations ودمج PR #39 ثم PR #40، أصبحت بعض الإصلاحات البرمجية منجزة، بينما ما يزال التشغيل الفعلي يحتاج same-number reconnect ثم controlled webhook cutover ثم PR C.
 
 المراجع:
 
 - `events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
 - `events/2026-08-13-pr39-whatsapp-runtime-readiness-merged.md`
+- `events/2026-08-13-pr40-embedded-signup-recovery-merged.md`
 
 ### LDI-001 — رد WhatsApp الاختباري الثابت ما زال يعمل بدل الرد المتوقع
 
-**الحالة:** Confirmed root cause — awaiting PR B + same-number reconnect + controlled webhook cutover.
+**الحالة:** Confirmed root cause — awaiting same-number reconnect + controlled webhook cutover.
 
 **المشاهدة:**
 
@@ -36,10 +37,10 @@ Meta WhatsApp webhook ما زال يشير إلى Cloud Run القديم بدل 
 
 التأكيد الإنتاجي أثبت:
 
-- active Meta callback = Cloud Run legacy target.
-- Cloud Run service `dbl-employee-ai-git` يرسل **100%** من traffic إلى revision قديمة `00024`.
-- serving revision مبنية من source commit يحتوي `receipt-reply.ts` والرد الثابت.
-- recent POST requests إلى `/api/webhooks/whatsapp` وصلت إلى نفس serving revision أثناء نافذة الاختبار اليدوي.
+- active Meta callback = Cloud Run legacy target;
+- Cloud Run service `dbl-employee-ai-git` يرسل 100% من traffic إلى revision قديمة `00024`؛
+- serving revision مبنية من source commit يحتوي `receipt-reply.ts` والرد الثابت؛
+- recent POST requests إلى `/api/webhooks/whatsapp` وصلت إلى نفس serving revision أثناء نافذة الاختبار اليدوي؛
 - current Vercel/main لا يحتوي النص الثابت أصلًا.
 
 **تصحيح مهم بخصوص AI:**
@@ -60,61 +61,73 @@ Current UI/server actions
 → modern outbound / AI / Embedded Signup
 ```
 
-**الخطر:** High.
+**الخطر:** High حتى اكتمال الانتقال التشغيلي.
 
 **قرار التشغيل:**
 
-لا يتم تغيير Meta callback الآن. immediate cutover = **NO-GO** حتى يصبح outbound credential حديثًا وEmbedded Signup موثوقًا.
+لا يتم تغيير Meta callback الآن. immediate cutover = NO-GO حتى ينجح same-number reconnect ويصبح outbound credential حديثًا وجاهزًا.
 
 ---
 
-### LDI-002 — Embedded Signup لا يفتح Meta ويعرض فشل تفويض
+### LDI-002 — Embedded Signup لا يفتح/يكمل Meta ويعرض فشل تفويض
 
-**الحالة:** Open — exact Meta/browser cause not yet confirmed; PR B is next.
+**الحالة:** PR #40 diagnostics/recovery merged; exact external Meta/browser cause still requires controlled live reproduction.
 
-**المشاهدة:**
+**المشاهدة الأصلية:**
 
-عند محاولة الربط يظهر:
+عند محاولة الربط كان يظهر:
 
 > تعذر إكمال الاتصال
 >
 > لم تعد Meta نتيجة تفويض مكتملة. ابدأ محاولة الربط من جديد.
 
-**ما تم إثباته:**
+**ما كان مثبتًا قبل PR #40:**
 
-- SDK readiness passed.
-- prepared state existed.
-- `FB.login` was invoked synchronously from the user click.
-- callback returned without `authResponse.code`.
-- server-side completion did not begin.
+- SDK readiness passed;
+- prepared state existed;
+- `FB.login` was invoked synchronously from the user click;
+- callback returned without `authResponse.code`;
+- server-side completion did not begin;
 - application mapped the outcome to `authorization_incomplete`.
-- PR #38 did not introduce the browser sequencing issue.
 
-**ما لم يُثبت بعد:**
+**ما أصلحه PR #40:**
 
-السبب الخارجي/المتصفحي الدقيق لعودة callback ناقصًا.
+- privacy-safe browser lifecycle diagnostics بدل collapse جميع الحالات إلى generic failure؛
+- safe callback/error taxonomy؛
+- bounded missing-asset-event recovery؛
+- synchronous `FB.login` user gesture محفوظ؛
+- duplicate/stale callback protections؛
+- one-launch-per-browsing-context invariant؛
+- fixed sessionStorage fence `dbl_whatsapp_embedded_signup_context_consumed`؛
+- fragment أصبح non-authoritative UX metadata فقط؛
+- same-tab fragment/reload/remount/pasted recovery URL لا تعيد launch eligibility؛
+- recovery يحتاج genuine `noopener noreferrer` context جديد؛
+- sessionStorage failure يفشل مغلقًا قبل Meta launch؛
+- Chromium/Firefox/WebKit isolation coverage؛
+- testing-stage Meta notice أصبح owner/admin contextual منخفض البروز؛
+- same-number reconnect guidance بقي truthful.
 
-فرضيات ما زالت تحتاج reproduction منضبط:
+Final reviewed head:
 
-- Production JSSDK origin/domain authorization state.
-- Meta login/session/cookie state.
-- browser popup/privacy behavior.
+`5488ce4485e141323e3f879e1ef28bced46251cf`
 
-**بانر وضع اختبار موافقات Meta:**
+Squash SHA:
 
-لا يُحذف كليًا ما دامت الموافقات التجارية الخارجية غير مكتملة، لكن يجب تحويله إلى owner/admin contextual notice منخفض البروز بدل warning دائم يوحي بأن التكامل مكسور.
+`a2ba117e78d674b17eea5a8630b2ccc141e5aaf8`
 
-**الأولوية:** Medium / PR B.
+**ما لم يُغلق بعد:**
+
+السبب الخارجي الحقيقي للـno-code callback لا يزال يحتاج controlled Production reproduction. لا يتم تخمين domain/browser/Meta cause بدون evidence.
+
+**الخطوة التالية:**
+
+Controlled Production same-number reconnect بعد تأكيد Vercel Production READY على PR #40 squash SHA وconfig ending `1674`.
 
 ---
 
 ### LDI-003 — الإرسال اليدوي من صفحة المحادثة يفشل
 
 **الحالة:** Root cause confirmed — PR #39 code fix merged; operational credential transition still pending.
-
-**المشاهدة الأصلية:**
-
-الإرسال اليدوي كان ينتهي بمحاولة فاشلة ورسالة عامة تطلب المحاولة مرة أخرى.
 
 **السبب الجذري المثبت:**
 
@@ -126,13 +139,13 @@ Production connection ما زالت تشير إلى legacy credential location:
 
 **ما أصلحه PR #39:**
 
-- readiness أصبحت server-authoritative ومشتقة من runtime الحالي.
-- legacy connection تبقى Connected تاريخيًا لكنها لا تُعرض كـoutbound-ready.
-- manual/automatic send blocked before Meta عندما credential غير قابلة للاستخدام.
-- manual permanent failure now blocks **before durable reservation**.
-- retry بrequest IDs مختلفة لا ينشئ outbound requests/messages/attempts ولا يستهلك quota.
-- late readiness/provider check بقي لحماية TOCTOU.
-- owner/admin يحصلان على guidance لإعادة ربط نفس الرقم.
+- readiness أصبحت server-authoritative ومشتقة من runtime الحالي؛
+- legacy connection تبقى Connected تاريخيًا لكنها لا تُعرض كـoutbound-ready؛
+- manual/automatic send blocked before Meta عندما credential غير قابلة للاستخدام؛
+- manual permanent failure blocks before durable reservation؛
+- retries المختلفة لا تنشئ outbound requests/messages/attempts ولا تستهلك quota؛
+- late readiness/provider check بقي لحماية TOCTOU؛
+- owner/admin يحصلان على guidance لإعادة ربط نفس الرقم؛
 - لا token copy/migration ولا account-scope rewrite.
 
 Final reviewed head:
@@ -145,9 +158,7 @@ Squash SHA:
 
 **ما لم يُغلق بعد:**
 
-Production outbound نفسه لن يصبح operational حتى ينجح same-number Embedded Signup reconnect وينتقل credential reference إلى modern Secret Manager path.
-
-**الخطورة الحالية:** operationally blocked, but false-ready / duplicate-failure behavior is repaired in merged code.
+Production outbound نفسه لن يصبح operational حتى ينجح same-number Embedded Signup reconnect وينتقل credential reference إلى modern `gcp-sm://...` path، ثم تصبح PR #39 readiness = `ready`.
 
 ---
 
@@ -157,9 +168,9 @@ Production outbound نفسه لن يصبح operational حتى ينجح same-numb
 
 **المشاهدة:**
 
-- Automatic يظهر selected ثم disabled.
-- التحويل إلى Review-only لا يسمح لاحقًا باستعادة Automatic.
-- activation يعيد `اختر وضع رد صالحاً`.
+- Automatic يظهر selected ثم disabled؛
+- التحويل إلى Review-only لا يسمح لاحقًا باستعادة Automatic؛
+- activation يعيد `اختر وضع رد صالحاً`؛
 - response test سبق أن أعاد نتيجة غير صالحة للتفعيل.
 
 **السبب الجذري المثبت:**
@@ -177,15 +188,13 @@ server receives mode missing
 
 الواجهة تستخدم readiness حية لتحديد eligibility بينما selected radio مشتق من persisted AI settings، ما يسمح بحالة checked-but-disabled مستحيلة عند الإرسال.
 
-الـradio state غير controlled بما يكفي للحفاظ على recovery بعد server errors/reload.
-
 **Response test:**
 
 المثبت أنه اكتمل لكنه أعاد `grounded=false`، وليس transport failure. السبب التفصيلي غير محفوظ حاليًا بما يكفي للتمييز بين insufficient knowledge / unsupported answer / grounding rejection أو نتيجة أخرى.
 
 **الخطورة:** High.
 
-**الإصلاح المتوقع:** PR C مستقل بعد تثبيت WhatsApp foundation أو بالتوازي دون خلط النطاقات.
+**الإصلاح المتوقع:** PR C مستقل بعد إكمال messaging foundation والانتقال التشغيلي الحالي.
 
 ---
 
@@ -213,19 +222,20 @@ Onboarding UI وactivation/persisted settings لا تعتمد دائمًا autho
 
 ## القرار التشغيلي الحالي
 
-Contacts PR 2 = **NO-GO مؤقتًا**.
+Contacts PR 2 = NO-GO مؤقتًا.
 
 الترتيب الحالي:
 
-1. **PR A — WhatsApp credential/runtime readiness — MERGED as PR #39**
-2. **PR B — Embedded Signup Production diagnostics and recovery — NEXT**
-3. successful same-number reconnect to modern Secret Manager credential
-4. **Controlled operational Meta webhook cutover** من legacy Cloud Run إلى canonical Vercel
-5. **PR C — Onboarding response-mode state machine**
-6. Production verification
-7. بعدها فقط Resume Contacts PR 2
+1. PR A — WhatsApp credential/runtime readiness — MERGED as PR #39
+2. PR B — Embedded Signup Production diagnostics and recovery — MERGED as PR #40
+3. **Controlled Production same-number reconnect — NEXT**
+4. verify modern Secret Manager credential + PR #39 readiness `ready`
+5. Controlled operational Meta webhook cutover من legacy Cloud Run إلى canonical Vercel
+6. PR C — Onboarding response-mode state machine
+7. Production verification
+8. بعدها فقط Resume Contacts PR 2
 
-Immediate webhook cutover remains **NO-GO** حتى ينجح PR B وcredential transition.
+Immediate webhook cutover remains NO-GO حتى ينجح credential transition ويثبت outbound readiness.
 
 ---
 
