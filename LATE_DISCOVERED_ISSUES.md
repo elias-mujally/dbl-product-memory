@@ -11,17 +11,18 @@
 
 ---
 
-## 2026-08-12 — Production manual testing after PR #38 merge
+## 2026-08-12 إلى 2026-08-13 — Production manual testing repair track
 
-تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. بعد Production Bug Audit ثم read-only confirmation إضافي، أصبحت بعض الأسباب الجذرية مثبتة وبعضها ما زال مفتوحًا.
+تم اكتشاف أربع مشكلات أثناء اختبار يدوي حقيقي للتطبيق على الهاتف. بعد Production Bug Audit وread-only confirmations ودمج PR #39، أصبحت بعض الأسباب الجذرية مثبتة وبعض الإصلاحات البرمجية منجزة، بينما ما يزال التشغيل الفعلي يحتاج PR B وsame-number reconnect وcontrolled cutover.
 
-مرجع التأكيد الخارجي:
+المراجع:
 
-`events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
+- `events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
+- `events/2026-08-13-pr39-whatsapp-runtime-readiness-merged.md`
 
 ### LDI-001 — رد WhatsApp الاختباري الثابت ما زال يعمل بدل الرد المتوقع
 
-**الحالة:** Confirmed root cause — awaiting PR A/PR B ثم controlled webhook cutover.
+**الحالة:** Confirmed root cause — awaiting PR B + same-number reconnect + controlled webhook cutover.
 
 **المشاهدة:**
 
@@ -43,7 +44,7 @@ Meta WhatsApp webhook ما زال يشير إلى Cloud Run القديم بدل 
 
 **تصحيح مهم بخصوص AI:**
 
-الرد الثابت نفسه لا يستدعي AI ولا Gemini/Vertex ولا grounding، وبالتالي يستهلك **0 AI tokens**. أي AI events ظهرت لاحقًا كانت عمليات منفصلة وليست جزءًا من الرد الثابت.
+الكود التاريخي للرد الثابت نفسه لا يستدعي AI أو Gemini/Vertex أو grounding. أي استهلاك GCP لاحظه المستخدم أثناء نافذة الاختبار لم يتم تتبع مصدره لأن الأولوية الحالية إصلاح foundation؛ لا يتم تسجيل أن الـ$0.15 كانت AI cost أو نفي ذلك بشكل مطلق بدون billing attribution audit.
 
 **المشكلة المعمارية الأوسع:**
 
@@ -63,13 +64,13 @@ Current UI/server actions
 
 **قرار التشغيل:**
 
-لا يتم تغيير Meta callback الآن. immediate cutover = **NO-GO** حتى يصبح outbound/credential path الحديث جاهزًا.
+لا يتم تغيير Meta callback الآن. immediate cutover = **NO-GO** حتى يصبح outbound credential حديثًا وEmbedded Signup موثوقًا.
 
 ---
 
 ### LDI-002 — Embedded Signup لا يفتح Meta ويعرض فشل تفويض
 
-**الحالة:** Open — exact Meta/browser cause not yet confirmed; planned PR B.
+**الحالة:** Open — exact Meta/browser cause not yet confirmed; PR B is next.
 
 **المشاهدة:**
 
@@ -103,19 +104,17 @@ Current UI/server actions
 
 لا يُحذف كليًا ما دامت الموافقات التجارية الخارجية غير مكتملة، لكن يجب تحويله إلى owner/admin contextual notice منخفض البروز بدل warning دائم يوحي بأن التكامل مكسور.
 
-**الأولوية:** Medium / PR B بعد PR A.
+**الأولوية:** Medium / PR B.
 
 ---
 
 ### LDI-003 — الإرسال اليدوي من صفحة المحادثة يفشل
 
-**الحالة:** Confirmed root cause — awaiting PR A.
+**الحالة:** Root cause confirmed — PR #39 code fix merged; operational credential transition still pending.
 
-**المشاهدة:**
+**المشاهدة الأصلية:**
 
-الإرسال اليدوي ينتهي بمحاولة فاشلة ورسالة:
-
-> تعذر إرسال الرسالة. حاول مرة أخرى.
+الإرسال اليدوي كان ينتهي بمحاولة فاشلة ورسالة عامة تطلب المحاولة مرة أخرى.
 
 **السبب الجذري المثبت:**
 
@@ -125,25 +124,30 @@ Production connection ما زالت تشير إلى legacy credential location:
 
 بينما Vercel runtime الحالي يعتمد modern Secret Manager/WIF credential path.
 
-المسار يصل إلى provider construction ثم يفشل قبل Meta Graph API request.
+**ما أصلحه PR #39:**
 
-Safe failure category:
+- readiness أصبحت server-authoritative ومشتقة من runtime الحالي.
+- legacy connection تبقى Connected تاريخيًا لكنها لا تُعرض كـoutbound-ready.
+- manual/automatic send blocked before Meta عندما credential غير قابلة للاستخدام.
+- manual permanent failure now blocks **before durable reservation**.
+- retry بrequest IDs مختلفة لا ينشئ outbound requests/messages/attempts ولا يستهلك quota.
+- late readiness/provider check بقي لحماية TOCTOU.
+- owner/admin يحصلان على guidance لإعادة ربط نفس الرقم.
+- لا token copy/migration ولا account-scope rewrite.
 
-`provider_configuration_missing`
+Final reviewed head:
 
-**الحالة الإنتاجية المؤكدة:**
+`e7a3d50b7d2b2328cd6bfc7d2c91231c6efc2d7b`
 
-- connection status = connected.
-- receiving account scope موجود ومتسق.
-- credential reference موجود لكنه legacy environment-based.
-- لا evidence على corruption من PR #38 credential lineage.
-- failed manual requests terminal وليست stuck/ambiguous.
+Squash SHA:
 
-**قرار:**
+`7f5d78ee3441be4cce8c8671992f08cb98b43717`
 
-لا blind retry قبل إصلاح credential/runtime readiness أو نجاح same-number Embedded Signup transition إلى Secret Manager credential.
+**ما لم يُغلق بعد:**
 
-**الخطورة:** High.
+Production outbound نفسه لن يصبح operational حتى ينجح same-number Embedded Signup reconnect وينتقل credential reference إلى modern Secret Manager path.
+
+**الخطورة الحالية:** operationally blocked, but false-ready / duplicate-failure behavior is repaired in merged code.
 
 ---
 
@@ -187,15 +191,11 @@ server receives mode missing
 
 ## اكتشافات إضافية من Production Bug Audit
 
-### Provider diagnostics واسعة أكثر من اللازم
+### Provider diagnostics
 
-عدة حالات مختلفة قد تنهار إلى:
+PR #39 حسّن provider/readiness taxonomy بدل انهيار حالات متعددة إلى `provider_configuration_missing`.
 
-`provider_configuration_missing`
-
-مثل legacy config gap أو credential RPC/WIF/Secret Manager/malformed payload.
-
-يجب إضافة safe stage-specific diagnostics بدون PII/secrets.
+ما يزال من الممكن زيادة test depth لبعض generic lookup/store failures لاحقًا، لكنها Low وليست correctness blockers.
 
 ### AI diagnostics واسعة أكثر من اللازم
 
@@ -215,16 +215,17 @@ Onboarding UI وactivation/persisted settings لا تعتمد دائمًا autho
 
 Contacts PR 2 = **NO-GO مؤقتًا**.
 
-الترتيب المعتمد:
+الترتيب الحالي:
 
-1. **PR A — WhatsApp credential/runtime readiness**
-2. **PR B — Embedded Signup Production diagnostics and recovery**
-3. **Controlled operational Meta webhook cutover** من legacy Cloud Run إلى canonical Vercel
-4. **PR C — Onboarding response-mode state machine**
-5. Production verification
-6. بعدها فقط Resume Contacts PR 2
+1. **PR A — WhatsApp credential/runtime readiness — MERGED as PR #39**
+2. **PR B — Embedded Signup Production diagnostics and recovery — NEXT**
+3. successful same-number reconnect to modern Secret Manager credential
+4. **Controlled operational Meta webhook cutover** من legacy Cloud Run إلى canonical Vercel
+5. **PR C — Onboarding response-mode state machine**
+6. Production verification
+7. بعدها فقط Resume Contacts PR 2
 
-Immediate webhook cutover risk: **8/10 High**، لأنه قد يجعل inbound يصل إلى Vercel بينما outbound ما زال غير قادر على الإرسال بسبب legacy credential reference.
+Immediate webhook cutover remains **NO-GO** حتى ينجح PR B وcredential transition.
 
 ---
 
