@@ -1,170 +1,196 @@
 # العوائق الحالية
 
-آخر تحديث: 2026-08-08
+آخر تحديث: **2026-08-19**
 
-## 1. Meta Business Verification
+## 1. Market validation — أكبر عائق معرفي حالي
 
-**الحالة:** Pending / In progress لأكثر من أسبوع.
+**الحالة:** غير مثبت بعد.
+
+لدينا دليل أن التجار يدفعون على WhatsApp automation، support، abandoned-cart recovery، order notifications، وAI commerce assistance.
+
+لكن لا يوجد بعد دليل كافٍ أن التجار سيدفعون تحديدًا مقابل:
+
+> AI-driven business execution الذي يحول intent إلى prepared/executed action.
 
 **الأثر:**
 
-يمنع أو يؤخر:
-
-- إكمال Independent Tech Provider qualification.
-- App Review.
-- Advanced Access.
-- Customer production onboarding.
+يمنع بناء Execution Layer كبيرة بثقة.
 
 **المطلوب:**
 
-انتظار Meta، وعدم الضغط على resend إلا عند وجود دليل أن الطلب عالق أو طلب Meta ذلك. إذا تجاوز الانتظار مدة طويلة إضافية بلا Required Actions، فالتصعيد إلى Meta Business Support يصبح منطقيًا.
+- 10–20 merchant interviews؛
+- Wizard-of-Oz عند الحاجة؛
+- قياس pain، correction rate، time/revenue impact، willingness-to-pay.
 
 ---
 
-## 2. Tech Provider qualification
+## 2. Salla developer / partner access
 
-**الحالة:** بدأ، لكنه متوقف على Business Verification.
+**الحالة:** غير محسومة.
 
-**لاحقًا بعد التحقق:**
+ما ظهر أثناء التسجيل:
 
-- مراجعة app settings.
-- screencasts.
-- App Review materials.
-- permission justifications.
+- company path يطلب مستندات شركة؛
+- personal publishing path يطلب وثيقة عمل حر سعودية؛
+- هذا يخلق مشكلة لمؤسس غير سعودي.
+
+**غير مثبت:** أن dev/test API access مستحيل دون هذه الوثائق.
+
+**المطلوب:**
+
+تحديد المسار الرسمي للمطور غير السعودي أو test/development access دون public publication.
+
+**قاعدة:** لا وثائق مزيفة ولا بيانات تجارية مصطنعة.
 
 ---
 
-## 3. WhatsApp Advanced Access
+## 3. First meaningful write action غير محسوم
 
-**غير مكتمل:**
+**الحالة:** فرضية.
 
-- `whatsapp_business_management`
-- `whatsapp_business_messaging`
+Candidates تشمل Draft Order وprepared checkout وأفعالًا أخرى منخفضة المخاطر.
 
-الحالة السابقة: Ready for testing فقط.
+**المطلوب:**
+
+اختيار Action من behavior/API حقيقي بعد read spike وmerchant workflow evidence، لا من نقاش معماري فقط.
+
+---
+
+## 4. Meta Business / Tech Provider / approvals
+
+**الحالة:** incomplete / not fully proven.
+
+قد تشمل المتطلبات:
+
+- Business Verification؛
+- Tech Provider / Solution Partner qualification؛
+- Advanced Access؛
+- App Review؛
+- coexistence eligibility؛
+- required webhook fields.
 
 **الأثر:**
 
-Admin/developer testing قد يعمل ضمن حدود، لكن external customer production onboarding غير جاهز.
+يمنع أو يؤخر live external WhatsApp onboarding.
+
+**ملاحظة:**
+
+هذا لا يجب أن يمنع اختبار core execution hypothesis. استخدم web/internal/semi-manual channel إذا لزم.
 
 ---
 
-## 4. Embedded Signup FINISH/asset event
+## 5. WhatsApp real Production connection غير موجود بعد
 
-**الحالة:** غير محسومة نهائيًا بعد config الجديد.
+**الحالة:** current DBL connection is test-only.
 
-تم إثبات:
+ثبت أن Production الحالي يشير إلى Meta Test WABA/Test Number وlegacy credential.
 
-- authorization code يعود مع config 1674.
-- config القديم كان خاطئًا.
+الرقم الحقيقي مختلف ومسجل في WhatsApp Business App.
 
-لم يُثبت بعد end-to-end customer asset grant مع WABA/phone metadata في الإنتاج.
+**الأثر:**
 
-**بعد Meta approval:**
+- standard same-number reconnect للاتصال الحالي غير مناسب؛
+- real outbound readiness غير متحقق؛
+- webhook cutover غير مسموح.
 
-إعادة اختبار المسار الكامل حتى Complete/FINISH، ثم backend exchange والتفعيل.
+**المطلوب قبل live onboarding:**
 
----
-
-## 5. Vercel Meta/WhatsApp environment audit
-
-Google Cloud وSecret Manager وحساب الخدمة والصلاحيات جاهزة مسبقًا.
-
-المتبقي هو التأكد من متغيرات الإنتاج/Preview في Vercel، خصوصًا:
-
-- `META_EMBEDDED_SIGNUP_CONFIG_ID`
-- `META_APP_ID`
-- `META_APP_SECRET`
-- `WHATSAPP_PROVIDER=meta`
-- `WHATSAPP_GRAPH_API_VERSION=v25.0`
-- `WHATSAPP_CREDENTIAL_STORE=gcp_secret_manager`
-- `WHATSAPP_SECRET_MANAGER_PROJECT`
-- `WHATSAPP_VERIFY_TOKEN`
-
-هذا تدقيق إعدادات، وليس سببًا لإعادة بناء Google Cloud.
+- safe test-scope cleanup أو قرار أحدث؛
+- confirm coexistence eligibility؛
+- required Meta prerequisites؛
+- modern Secret Manager credential؛
+- controlled verification.
 
 ---
 
-## 6. Legal owner decisions
+## 6. PR #43 — test-scope cleanup ليس جاهزًا تلقائيًا
 
-لم تُحسم نهائيًا:
+**الحالة عند آخر تحقق:** Draft / Open / Unmerged.
 
-- legal entity name.
-- governing jurisdiction.
-- dispute terms.
-- exact retention periods.
-- long-term privacy/deletion contact.
-- finalized versioned Terms acceptance.
+- head: `b9b4c0ed490aeeba0c4dc65fb5e4eaaf48661396`.
+- base أقدم من main الحالي.
+- mergeability ليست جاهزة حاليًا.
 
-الصفحات الحالية محافظة وصادقة، لكنها ليست بديلًا عن legal review عند الإطلاق التجاري الواسع.
+**الأثر:**
 
----
+لا يجوز اعتباره طريقًا جاهزًا للحذف.
 
-## 7. Billing/payment
+**المطلوب إذا عاد للمسار:**
 
-لا يوجد Billing system نهائي داخل المنتج.
-
-المطلوب لاحقًا:
-
-- pricing.
-- payment provider.
-- plan limits.
-- subscriptions.
-- invoices.
-- failed payment lifecycle.
-
-Gumroad حل مؤقت خارج التطبيق، وليس architecture نهائية.
+- rebase أو rebuild على main الحالي؛
+- exact-head database/E2E CI؛
+- independent SQL/security review؛
+- merge منفصل؛
+- cleanup execution authorization منفصل تمامًا.
 
 ---
 
-## 8. Language selector وDark Mode
+## 7. Legacy Cloud Run webhook ownership
 
-البنية موجودة، لكن controls مؤجلة لأن:
+**الحالة:** ما يزال قائمًا تاريخيًا.
 
-- بعض الصفحات المؤجلة لم تترجم بالكامل.
-- Dark mode يحتاج broad component color migration.
+Meta inbound webhook يذهب إلى legacy Cloud Run ويشرح الرد الثابت:
 
-إظهار controls الآن قد يكشف تجربة ناقصة.
+> تم استلام رسالتك بنجاح من DBL Employee AI ✅
 
----
+**التصنيف:** مشكلة تشغيلية منفصلة عن Embedded Signup eligibility.
 
-## 9. Docker غير متوفر محليًا في بيئة Codex السابقة
-
-الأثر المتكرر:
-
-- Supabase reset/pgTAP لا يعملان محليًا.
-
-المعالجة:
-
-- GitHub Actions Linux job هو gate الرسمي.
-- authenticated E2E تستخدم local disposable Supabase داخل CI.
-
-هذا ليس blocker للدمج إذا CI الأخضر يغطيه، لكنه limitation يجب ذكره دائمًا.
+**Webhook cutover:** NO-GO حتى real connection + modern credential + Vercel inbound/outbound readiness + subscriptions + rollback.
 
 ---
 
-## 10. Product areas غير مكتملة
+## 8. Product focus / scope creep
 
-- Contacts route/UI.
-- Analytics.
-- Subscription.
-- Team management.
-- Appearance & Language settings.
-- Privacy & Legal inside AppShell.
+**الحالة:** خطر دائم.
 
-هذه ليست blockers للإنتاج الحالي، لكنها أجزاء مهمة للوصول إلى تجربة SaaS أوسع وجاهزة للبيع.
+أكبر خطر حالي هو تحويل North Star إلى build scope ضخم.
+
+لا تبدأ بلا evidence:
+
+- CRM؛
+- ERP؛
+- universal workflow builder؛
+- generic execution framework؛
+- additional channels؛
+- multi-agent؛
+- marketplace؛
+- universal policy DSL؛
+- provider expansion واسع.
 
 ---
 
-## مغلق: PR #35 / Codex limit
+## 9. Billing / legal / language/theme
 
-العائق السابق الخاص بحد Codex وPR #35 أُغلق بالكامل:
+هذه ما تزال غير مكتملة، لكنها **ليست blocker للـvalidation الحالية**.
 
-- عاد Codex.
-- تم دفع الإصلاحات.
-- اجتاز PR #35 المراجعات النهائية دون High/Medium.
-- تم squash merge إلى `main` عند SHA `b14c1fe2e144cb58cd0618501abe3f10c5a88494`.
-- migration الإنتاجية طُبقت بنجاح مرة واحدة.
-- Vercel production أصبح READY.
+تعود للأولوية عندما يثبت wedge ويقترب المنتج من paid beta.
 
-لا يُعامل PR #35 كعائق حالي بعد الآن.
+تشمل:
+
+- pricing/payment/subscription lifecycle؛
+- final legal owner decisions؛
+- remaining localization surfaces؛
+- language selector؛
+- dark mode؛
+- analytics/commercial polish.
+
+---
+
+## 10. Docker limitation في بعض بيئات Codex
+
+Supabase reset/pgTAP قد لا يعملان محليًا إذا Docker غير متاح.
+
+GitHub Actions Linux job يبقى gate الرسمي عند الحاجة.
+
+هذا limitation تشغيلي وليس سببًا لخفض متطلبات الاختبار.
+
+---
+
+# عوائق لم تعد يجب أن تقود الأولوية
+
+- Contacts PR 2 ليس blocker استراتيجيًا بحد ذاته.
+- PR C onboarding response-mode ليس blocker لاختبار execution thesis.
+- تعدد القنوات ليس prerequisite حاليًا.
+- إكمال كل SaaS polish ليس prerequisite للمقابلات أو Wizard-of-Oz.
+
+هذه الأعمال قد تعود إذا أصبحت prerequisite مباشرًا لمرحلة مثبتة.
