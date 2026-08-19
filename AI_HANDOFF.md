@@ -2,11 +2,9 @@
 
 ## الهدف
 
-هذا الملف يتيح لـChatGPT أو Claude أو Gemini أو Copilot أو Codex فهم مشروع DBL بسرعة دون إعادة سرد القصة من الصفر.
+هذا الملف يتيح لـChatGPT أو Claude أو Gemini أو Copilot أو Codex فهم DBL بسرعة دون إعادة بناء القصة من الصفر.
 
 ## اقرأ أولًا
-
-بالترتيب:
 
 1. `CURRENT_STATUS.md`
 2. `STRATEGY_PIVOT_2026-08-19.md`
@@ -14,117 +12,124 @@
 4. `ROADMAP.md`
 5. `DECISIONS.md`
 6. `PROBLEMS_AND_SOLUTIONS.md`
-7. `CHANGELOG.md`
-8. `BLOCKERS.md`
-
-> ملاحظة مهمة: سجل `STRATEGY_PIVOT_2026-08-19.md` يوثق سبب إعادة تقييم DBL Employee AI، خطر الاعتماد على Meta، مراجعة المنافسين والمستشارين، قيمة البنية الحالية، فرضية AI Business Execution، دور Salla كأول Provider محتمل لا كهوية دائمة، وخطة التحقق الحالية. يجب قراءته قبل اقتراح أي تغيير استراتيجي كبير على المنتج.
+7. `LATE_DISCOVERED_ISSUES.md`
+8. `CHANGELOG.md`
+9. `BLOCKERS.md`
 
 ## الهوية
 
 - المنتج: DBL Employee AI
 - المظلة: Digital Blueprint Lab (DBL)
-- المستودع البرمجي: `elias-mujally/dbl-employee-ai`
+- التطبيق: `elias-mujally/dbl-employee-ai`
 - الإنتاج: `https://dbl-employee-ai.vercel.app`
-- Memory repo: `elias-mujally/dbl-product-memory`
+- الذاكرة: `elias-mujally/dbl-product-memory`
 
-## وصف المنتج في سطر واحد
+## الوصف الحالي في سطر واحد
 
-SaaS لبناء موظف AI قابل للتخصيص يتعلم من معرفة النشاط المعتمدة ويتعامل مع العملاء، بدءًا من WhatsApp ثم قنوات متعددة لاحقًا.
+DBL يتجه من موظف AI يركز على المحادثة إلى **موظف تشغيلي موثوق** يفهم الطلب، يقرأ أنظمة النشاط، يجهز فعلًا تجاريًا، يطبق سياسات deterministic، يطلب موافقة عند الحاجة، ينفذ، يتحقق، ويسجل النتيجة.
 
-> هذا الوصف يعكس المنتج المنفذ تاريخيًا. الاتجاه الاستراتيجي الجاري التحقق منه موثق في `STRATEGY_PIVOT_2026-08-19.md` ولا يجب اعتباره تنفيذًا مكتملًا قبل تحقق السوق والكود.
+> هذه North Star قيد التحقق، وليست تصريحًا لبناء منصة Execution عامة الآن. أول Wedge مقترح هو Commerce / Sales Execution، وSalla أول Provider محتمل إذا توفر الوصول الرسمي.
 
-## الحالة الحالية المختصرة جدًا
+## لماذا تغير الاتجاه
 
-- Main يتضمن Knowledge Hub الجديد من PR #34.
-- PR #35 مفتوح Draft لإصلاح approval UX وإضافة durable create idempotency.
-- آخر head مدفوع لـPR #35: `d79dc723f45499e4b14c93af60e645eff4a018d3`.
-- هناك إصلاح محلي غير مدفوع في ملفين بسبب Codex external-command limit.
-- لا تدمج PR #35 قبل دفع الإصلاح وتشغيل CI ومراجعة مستقلة.
-- Meta Business Verification وTech Provider qualification ما زالا pending.
+المنتج القديم كان قابلًا للبناء لكنه ضعيف دفاعيًا إذا ظلت القيمة الأساسية:
+
+`AI replies + WhatsApp + Knowledge + automation`
+
+المنافسون ومنصة Meta نفسها يضغطون طبقة المحادثة. لذلك القرار الحالي:
+
+> Meta قناة وليست المنتج. Salla Provider أول وليست هوية المنتج. القيمة التي يجب أن يملكها DBL هي orchestration + policy + approval + execution + verification + reconciliation + audit.
+
+اقرأ `STRATEGY_PIVOT_2026-08-19.md` قبل اقتراح CRM/ERP/omnichannel/workflow builder أو توسع عام.
+
+## الحالة التنفيذية المختصرة
+
+- آخر functional WhatsApp merge هو PR #42 عند `ede862e60bf1ace67a1e3fbb49d1e3f3d4bc7caf`.
+- `main` في مستودع التطبيق تقدم بعد ذلك بcommits توثيقية فقط؛ تحقق من GitHub قبل الاعتماد على SHA محفوظ هنا.
+- PR #43 `codex/test-whatsapp-scope-cleanup` ما يزال Draft وغير مدمج عند آخر تحقق، head `b9b4c0ed490aeeba0c4dc65fb5e4eaaf48661396`، وقاعدته أقدم من main الحالي؛ لا تدمجه دون إعادة التحقق والمراجعة.
+- اتصال WhatsApp الحالي في Production ثبت أنه Test WABA/Test Number وبياناته التشغيلية Test-only.
+- الرقم الحقيقي مختلف ومسجل في WhatsApp Business App؛ Standard Embedded Signup ليس المسار الصحيح له حاليًا.
+- Coexistence هو الاتجاه المفضل معماريًا إذا ثبتت أهلية Meta، لكن لا يبدأ تنفيذ live onboarding قبل إزالة/تنظيف test scope بأمان أو اتخاذ قرار أحدث.
+- Meta webhook ما يزال على legacy Cloud Run، والرد الثابت القديم مشكلة تشغيلية منفصلة. Webhook cutover = NO-GO حتى اتصال Production الحقيقي وmodern credential readiness.
+- Contacts PR 2 وPR C لا يعودان أولوية المنتج الحالية ما لم يثبت أنهما prerequisite مباشر للـvalidation wedge.
+
+## الوضع الاستراتيجي الحالي
+
+`Planning freeze -> merchant validation + provider access/read spike -> evidence -> narrow build decision`
+
+أهم الأسئلة الآن:
+
+1. هل يوجد Merchant pain متكرر في تحويل محادثة/طلب إلى business action؟
+2. هل Salla أو Provider أول يسمح بقراءة موثوقة وwrite منخفض المخاطر؟
+3. ما أقل Action له قيمة اقتصادية ويمكن وضع Human Approval قبله؟
+4. هل يمكن اختبار الفرضية دون انتظار Meta؟
 
 ## قواعد الثقة
 
-1. لا تفترض أن PR مدمج لأن التقرير قال “جاهز”. تحقق من GitHub.
-2. لا تفترض أن local fix موجود على GitHub.
-3. Production alias هو المرجع، لا immutable deployment قديم.
-4. لا تغيّر production/Meta/Supabase data دون موافقة صريحة.
-5. لا تضع secrets في commits أو logs أو هذه الذاكرة.
-6. عند وجود فرق بين الاختبارات وما يراه المستخدم، تجربة الإنتاج الفعلية لها الأولوية في التشخيص.
-7. Product Memory توثق النية والسياق والقرارات؛ `dbl-employee-ai` يبقى مصدر الحقيقة للتنفيذ الحالي.
+1. لا تفترض أن PR مدمج لأن تقريرًا قال “جاهز”. تحقق من GitHub.
+2. لا تفترض أن Production يطابق local branch.
+3. Vercel canonical Production alias هو المرجع للتطبيق المنشور.
+4. لا تغيّر Production/Meta/Supabase data دون موافقة صريحة.
+5. لا تضع secrets في commits أو logs أو الذاكرة.
+6. عند تعارض الاختبارات مع الاستخدام الفعلي، دليل Production له الأولوية في التشخيص.
+7. Product Memory توثق القرار والسياق؛ التطبيق ومصادر Production هي مصدر الحقيقة للتنفيذ.
+8. Merchant evidence يسبق تقارير مستشارين إضافية عندما يكون السؤال Product-Market Fit.
 
-## قواعد هندسية
+## قواعد هندسية ثابتة
 
 - Forward-only migrations.
 - لا تعديل migration تاريخية.
 - RLS وworkspace isolation لا تُضعف.
-- SECURITY DEFINER يحتاج safe search_path وأسماء fully qualified.
-- browser لا يحدد actor/workspace/phone/provider authority.
-- approved Knowledge فقط للردود التجارية.
-- client locks ليست ضمان idempotency.
-- provider/database raw errors لا تصل للمستخدم.
-- Arabic/English + RTL/LTR + bidi isolation.
-- AI reply language منفصلة عن UI locale.
+- SECURITY DEFINER يحتاج empty/safe search_path وfully qualified references.
+- browser لا يحدد actor/workspace/provider authority.
+- deterministic policy تفرض الأموال والصلاحيات والحالات الحرجة؛ الـLLM لا يمنح نفسه صلاحية من نص Knowledge.
+- أي external write يحتاج ambiguous/unknown state وreconciliation قبل retry.
+- reuse architectural pattern، لا تنسخ implementation خاص بواتساب بلا دليل.
+- implement first, abstract second.
+- Human approval قبل autonomy.
 
-## أسلوب تنفيذ المهام
+## أسلوب تنفيذ PRs الكبيرة
 
-لأي PR كبير:
-
-1. Audit/read-only أولًا عند عدم وضوح السبب.
-2. Draft PR.
+1. Audit/read-only إذا كان السبب غير واضح.
+2. Draft PR ضيق.
 3. Full validation.
-4. Critical self-review.
-5. إصلاح High وMedium.
+4. Adversarial self-review.
+5. إصلاح High/Medium.
 6. Independent final review.
 7. Squash merge مع expected head SHA.
-8. Production verification.
-9. تحديث هذا المستودع.
+8. Production verification منفصلة.
+9. تحديث Product Memory.
 
-## نقطة الاستئناف لـPR #35
+## ما لا ينبغي فعله الآن
 
-عندما تتوفر صلاحية الدفع:
+- لا تبنِ CRM أو ERP داخل DBL.
+- لا تبنِ universal execution platform أو policy DSL.
+- لا تضف قنوات جديدة لمجرد أن الرؤية طويلة المدى omnichannel.
+- لا توسع multi-agent أو marketplace أو model routing.
+- لا تجعل Salla تبعية وجودية جديدة.
+- لا تعتبر WhatsApp شرطًا لاختبار الـexecution hypothesis؛ استخدم web/internal/Wizard-of-Oz إذا لزم.
+- لا تغيّر Test WABA identifiers إلى الرقم الحقيقي مباشرة.
+- لا تعمل webhook cutover قبل اتصال Production حقيقي modern/readiness-verified.
+- لا تنفذ cleanup Production من PR #43 لمجرد دمج migration؛ التنفيذ يحتاج إذنًا وتشغيلًا منفصلًا.
 
-- لا تعيد بناء الحل.
-- افحص الـdiff المحلي في:
-  - `components/knowledge-task-form-actions.tsx`
-  - `tests/e2e/knowledge-idempotency.spec.ts`
-- تحقق أن:
-  - نفس العملية تستخدم نفس idempotency key عند retry.
-  - “Save and add another” يولد key جديدًا للعملية الجديدة.
-  - لا توجد ملفات أخرى معدلة.
-- شغّل checks.
-- commit/push إلى branch الحالي.
-- انتظر CI.
-- final review.
+## أسئلة يجب طرحها عند أي قرار جديد
 
-## ما لا ينبغي فعله
-
-- لا تستخدم PR جديدًا لتجاوز PR #35 إلا إذا أصبح الفرع غير قابل للاسترداد.
-- لا تدمج head القديم.
-- لا تحذف replay ledger أو تقلل الأمان لتجنب migration.
-- لا تجعل Owner يشعر أن DBL يراجع علامته.
-- لا تجعل Documents شرطًا لـ100% readiness.
-- لا تعرض technical Knowledge schema في المسار الطبيعي.
-- لا تظهر language/theme selector قبل جاهزية الصفحات.
-- لا تبدأ CRM/ERP أو منصة Execution عامة فقط لأن الرؤية بعيدة المدى تسمح بها؛ اقرأ سجل الاستراتيجية واختبر الفرضية الحالية أولًا.
-
-## أسئلة يجب طرحها عند قرار جديد
-
-- هل يحسن تجربة صاحب مشروع غير تقني؟
-- هل يحافظ على سيطرة العميل؟
-- هل يمنع فقدان البيانات أو التكرار؟
-- هل يمكن تنفيذه بلا schema change؟
-- إذا احتاج migration، هل الضمان يستحقها؟
-- هل الرسالة واضحة بالعربية والإنجليزية؟
-- هل الاختبارات تفتح التجربة فعليًا، أم تبحث عن نص في source فقط؟
-- هل القرار مبني على دليل سوق/تنفيذ جديد، أم يعيد نقاشًا حُسم في سجل الاستراتيجية دون دليل جديد؟
+- ما Business outcome الذي يتحسن؟
+- هل هناك Merchant evidence أم مجرد منطق نظري؟
+- هل هذا prerequisite للفرضية الحالية أم feature جانبية؟
+- هل يمكن اختباره يدويًا أو شبه يدوي قبل البناء الكامل؟
+- هل Provider API يسمح بالفعل المطلوب بأمان؟
+- هل الفعل reversible أو يحتاج reconciliation؟
+- هل Human Approval واضح؟
+- هل القرار يزيد lock-in مع منصة خارجية؟
+- هل نحن نعيد نقاشًا حُسم دون دليل جديد؟
 
 ## تحديث الذاكرة
 
-بعد إنجاز مهمة:
-
-- `CURRENT_STATUS.md`: النقطة الحالية.
-- `CHANGELOG.md`: ماذا حدث وتاريخه.
-- `DECISIONS.md`: لماذا اتخذ القرار.
-- `PROBLEMS_AND_SOLUTIONS.md`: المشكلة والدرس.
-- `BLOCKERS.md`: إزالة/إضافة العائق.
-- `STRATEGY_PIVOT_2026-08-19.md`: لا يُعاد كتابته كحالة يومية؛ يُحدّث فقط إذا ظهر دليل يغيّر الفرضية الاستراتيجية نفسها.
+- `CURRENT_STATUS.md`: نقطة الاستئناف الحالية.
+- `ROADMAP.md`: ترتيب العمل الفعلي.
+- `VISION.md`: North Star بعيدة المدى.
+- `DECISIONS.md`: القرارات الدائمة.
+- `BLOCKERS.md`: العوائق الحالية فقط.
+- `CHANGELOG.md`: المراحل التاريخية.
+- `STRATEGY_PIVOT_2026-08-19.md`: يُحدّث فقط إذا تغيرت الفرضية الاستراتيجية بدليل جديد.
