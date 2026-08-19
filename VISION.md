@@ -1,157 +1,210 @@
 # رؤية DBL Employee AI
 
+آخر تحديث استراتيجي: **2026-08-19**
+
 ## الفكرة الجوهرية
 
-DBL Employee AI ليس Chatbot عاديًا، وليس مجرد أداة ردود تلقائية لواتساب.
+DBL Employee AI ليس Chatbot عاديًا، وليس مجرد أداة ردود تلقائية، وليس الهدف النهائي أن يصبح CRM أو ERP جديدًا.
 
-الرؤية هي بناء **موظف رقمي قابل للتخصيص** يعمل لصالح النشاط التجاري، يفهم معرفة الشركة المعتمدة، ويتعامل مع العملاء عبر قنوات متعددة، ويساعد في البيع والدعم والمتابعة والحجز والفرز والتصعيد.
+الرؤية هي بناء **موظف رقمي تشغيلي موثوق** يستطيع:
 
-## المشكلة التي يحلها
+- فهم طلب العميل أو الموظف؛
+- استخدام معرفة الشركة المعتمدة؛
+- قراءة الأنظمة الحقيقية للنشاط؛
+- تجهيز Action تجاري أو تشغيلي؛
+- تطبيق سياسات وصلاحيات deterministic؛
+- طلب Human Approval عند الحاجة؛
+- التنفيذ عبر الأنظمة الخارجية؛
+- التحقق من النتيجة؛
+- تسجيل ما حدث بصورة قابلة للتدقيق.
 
-أصحاب المشاريع الصغيرة والمتوسطة يواجهون عادةً:
+الواجهة التسويقية قد تستمر في وصفه ببساطة كـ"موظف AI" أو "Sales Copilot". عبارة **AI Business Execution Layer** هي North Star داخلية أكثر من كونها اسمًا تسويقيًا.
 
-- رسائل كثيرة ومتكررة.
-- تأخر الرد.
-- اختلاف جودة الرد بين الموظفين.
-- ضياع فرص البيع خارج ساعات العمل.
-- عدم وجود فريق دعم كامل.
-- صعوبة تنظيم معلومات المنتجات والسياسات.
-- أدوات عالمية معقدة أو غالية أو ضعيفة في العربية واللهجات المحلية.
+## الوعد الأساسي
 
-DBL يهدف إلى إعطاء صاحب النشاط موظفًا ذكيًا يمكن تدريبه وإدارته دون معرفة تقنية عميقة.
+> علّم DBL عن نشاطك، اربطه بالأنظمة التي يعمل عليها النشاط، حدّد صلاحياته وحدوده، ثم دعه يجهز وينفذ العمل الحقيقي بأمان وتحت سيطرة الإنسان.
 
-## الوعد الأساسي للمنتج
+## الفرق بين الاتجاه القديم والجديد
 
-> علّم موظفك عن نشاطك، حدّد أسلوبه وصلاحياته، ثم دعه يتعامل مع العملاء ضمن حدود آمنة وواضحة.
+```text
+قديم:
+Customer asks -> AI answers
+
+اتجاه جديد:
+Customer asks
+-> AI understands
+-> reads real systems
+-> prepares action
+-> deterministic policy checks
+-> human approval when required
+-> execute
+-> verify
+-> reconcile if uncertain
+-> audit
+```
+
+المحادثة ما تزال مهمة، لكنها **واجهة دخول للعمل** وليست وحدها moat المنتج.
 
 ## المبادئ
 
-1. **العميل يملك قراره ومحتواه**
-   - DBL لا يراجع العلامة التجارية نيابة عنه.
-   - المراجعات داخل Workspace العميل.
-   - Owner/Admin يحددان ما يصبح متاحًا للـAI.
+### 1. النتيجة التجارية أهم من AI vocabulary
 
-2. **المعرفة المعتمدة قبل الادعاءات**
-   - الردود التجارية يجب أن تعتمد على Knowledge معتمدة.
-   - لا اختلاق أسعار أو سياسات أو توفر.
-   - المحتوى غير الكافي يؤدي إلى مراجعة أو تصعيد آمن.
+DBL يجب أن يبيع نتيجة مفهومة:
 
-3. **AI لا يلغي السيطرة البشرية**
-   - Review-only mode.
-   - Automatic mode كخيار منفصل.
-   - Handoff وتصعيد للبشر.
-   - أدوار وصلاحيات واضحة.
+- إغلاق فرصة بيع؛
+- تقليل عمل يدوي؛
+- تجهيز طلب؛
+- التحقق من مخزون؛
+- تسريع عملية تشغيلية؛
+- تقليل أخطاء التنفيذ.
 
-4. **العربية تجربة أصلية وليست ترجمة ملحقة**
-   - RTL حقيقي.
-   - عزل القيم التقنية LTR.
-   - واجهة عربية وإنجليزية.
-   - لاحقًا: لهجات يمنية وخليجية واقعية.
+لا يكفي أن نقول "AI Agent" أو "Omnichannel".
 
-5. **سهولة الاستخدام أهم من كشف البنية التقنية**
-   - المستخدم يضيف منتجًا، لا “Knowledge Source”.
-   - المستخدم يعلّم موظفه، لا يدير جداول داخلية.
-   - المصطلحات التقنية تُخفى عن المسار الطبيعي.
+### 2. Meta قناة وليست المنتج
 
-6. **أمان المستأجرين والأسرار**
-   - RLS.
-   - Workspace isolation.
-   - Secret Manager للعملاء.
-   - لا أسرار في logs أو browser أو Supabase tables العادية.
+WhatsApp/Instagram/Messenger قد تكون قنوات مهمة، لكن DBL يجب ألا ينهار إذا تغيرت منصة واحدة.
 
-## صورة المنتج المستقبلية
+### 3. Salla Provider أول، وليست هوية دائمة
 
-### الموظف بعد اكتمال الرؤية
+Commerce هو أول Vertical مقترح للتحقق، وSalla أول Provider محتمل. لا نبني DBL كملحق وجودي لسلة.
 
-- يرد على الاستفسارات.
-- يشرح المنتجات والخدمات.
-- يقترح المنتج الأنسب.
-- يتعامل مع الأسئلة الشائعة.
-- يشرح سياسات التوصيل والاسترجاع والضمان.
-- يجمع بيانات العميل المحتمل.
-- يحجز مواعيد.
-- ينشئ Follow-ups.
-- يصنف العملاء والرسائل.
-- يصعد الحالات الحساسة إلى إنسان.
-- يتحدث بصوت وشخصية العلامة التجارية.
-- يقدم تقارير عن الأسئلة والفرص والمشاكل المتكررة.
+### 4. Knowledge ليست Policy
 
-### القنوات المستهدفة
+Knowledge تعطي معنى وسياقًا.
 
-المرحلة الأولى:
+Policy تفرضها البرمجيات deterministically، مثل:
 
-- WhatsApp Cloud API
+- هل write action مسموح؟
+- هل يحتاج موافقة؟
+- ما الحد المالي؟
+- هل refund ممنوع؟
 
-المرحلة اللاحقة:
+الـLLM لا يستنتج لنفسه صلاحية من نص Knowledge.
 
-- Instagram DMs
-- Facebook Messenger
-- TikTok messaging عند توفر التكامل المناسب
-- Threads عند توفر APIs مناسبة
-- Web chat
-- Email
-- وربما Voice مستقبلًا
+### 5. Human Approval قبل Autonomy
 
-## التميز المحلي
+أول Beta حقيقي يجب أن يبدأ بـL1 / Draft-only أو Approval-before-write.
 
-الميزة التنافسية ليست عبارة “AI يرد على العملاء”، لأن السوق العالمي مليء بها.
+الاستقلالية التلقائية تأتي فقط بعد دليل reliability حقيقي.
 
-التميز المقصود:
+### 6. التنفيذ الخارجي يحتاج Verification وReconciliation
 
-- عربية قوية فعلًا.
-- لهجات يمنية وخليجية.
-- تجربة سهلة لصاحب مشروع غير تقني.
-- دعم أسواق ومدفوعات وواقع تشغيلي محلي.
-- أسعار تناسب المشاريع الصغيرة.
-- Knowledge UX يفهمها صاحب المتجر.
-- تكاملات متعددة القنوات تدريجيًا.
+إذا كانت نتيجة write action غامضة، لا نعيد المحاولة عميانيًا. نتحقق من النظام الخارجي أولًا.
 
-## نموذج العمل المتوقع
+### 7. Implement first, abstract second
 
-SaaS اشتراكي، مع خطط مبنية على مزيج من:
+لا universal commerce layer ولا universal workflow engine قبل أن يعمل Provider واحد وAction واحد ويثبتا قيمة.
 
-- عدد القنوات.
-- عدد المحادثات أو الرسائل.
-- استخدام AI.
-- عدد أعضاء الفريق.
-- ميزات التقارير والأتمتة.
-- عدد Workspaces أو الموظفين الرقميين.
+### 8. العربية تجربة أصلية
 
-لا توجد حتى الآن سياسة تسعير نهائية معتمدة.
+- RTL حقيقي.
+- واجهة عربية وإنجليزية.
+- عزل القيم التقنية LTR.
+- دعم لهجات محلية حيث تضيف قيمة حقيقية.
 
-## رؤية 1 سنة
+### 9. أمان المستأجرين والأسرار غير قابل للتفاوض
 
-- WhatsApp onboarding يعمل للعملاء الخارجيين.
-- Knowledge + AI Employee setup واضحان.
-- العربية والإنجليزية مكتملتان في المسارات الأساسية.
-- Language selector ظاهر.
-- Light/Dark/System theme يعمل.
-- Subscription وبوابة دفع مناسبة.
-- تقارير أولية.
-- أول عملاء مدفوعين.
+- RLS.
+- Workspace isolation.
+- Secret Manager.
+- no secrets in browser/logs.
+- server-authoritative mutations.
 
-## رؤية 2–3 سنوات
+## أول بيئة اختبار للرؤية
 
-- متعدد القنوات.
-- Agents متخصصة حسب القسم.
-- Sales/support/booking workflows.
-- Analytics أعمق.
-- Marketplace أو templates لموظفين جاهزين.
-- تكامل مع CRM وCalendars وCommerce platforms.
-- توسع خليجي وعربي.
+### Commerce / Sales Execution
 
-## رؤية 5 سنوات
+الفرضية الحالية:
 
-- شركة SaaS إقليمية قوية.
-- عدة منتجات أو موظفين رقميين تحت DBL.
-- فريق هندسي وتجاري ودعم.
-- خروج المؤسس من الاعتماد على التشغيل اليدوي.
-- منتج يعمل حتى عندما لا يعمل المؤسس.
+> DBL يستطيع تحويل intent تجاري إلى Action مفيد وقابل للقياس.
+
+مثال:
+
+```text
+customer intent
+-> identify product/variant/quantity
+-> read inventory/price
+-> prepare lowest-risk useful write action
+-> merchant approval
+-> execute
+-> verify
+-> record outcome
+```
+
+أول write action غير محسوم. قد يكون Draft Order أو prepared checkout أو Action أخرى يثبت Provider API أنها الأنسب.
+
+## ما لم يُثبت بعد
+
+- أن التجار سيدفعون تحديدًا مقابل AI-driven execution.
+- أن Sales Execution هو أفضل Wedge.
+- أن Salla سيكون Provider الأول فعليًا.
+- أن WhatsApp سيكون قناة Beta الأولى إذا بقي Meta عائقًا.
+- أن مستوى الاستقلالية يجب أن يتجاوز Human Approval.
+
+هذه فرضيات يجب اختبارها، لا حقائق منتج.
+
+## ما نحتفظ به من المنتج الحالي
+
+Foundation عالية القيمة:
+
+- auth/workspaces/multi-tenancy؛
+- Supabase/PostgreSQL/RLS؛
+- secure credentials؛
+- Knowledge foundation؛
+- Contacts foundation؛
+- localization؛
+- CI/testing discipline؛
+- idempotency؛
+- Reserve -> Authorize -> Execute -> Observe -> Reconcile pattern؛
+- audit concepts.
+
+نعيد استخدام **النمط** حيث يصلح، لا نفترض أن WhatsApp-specific code يصبح execution engine عامًا.
+
+## الرؤية القريبة
+
+إثبات Action واحد مع Merchant واحد:
+
+- pain حقيقي؛
+- read access مقبول؛
+- write محدود بموافقة بشرية؛
+- Provider semantics مفهومة؛
+- Action يقلل وقتًا أو يؤثر في إيراد؛
+- merchant مستعد للاستمرار أو الدفع.
+
+## رؤية 1–2 سنة إذا نجحت الفرضية
+
+- Commerce Sales/Operations wedge مثبتة.
+- عدة Actions موثوقة داخل نفس Vertical.
+- Provider ثانٍ يبرر استخراج abstraction حقيقية.
+- Human approval وpolicy/audit قويان.
+- WhatsApp/web/قنوات أخرى تصبح مداخل إلى نفس execution core بدل منتجات مستقلة.
+
+## رؤية 3–5 سنوات
+
+إذا أثبت Commerce execution قيمته، يمكن أن يتوسع DBL تدريجيًا نحو:
+
+> **AI Operational Layer over the company software stack**
+
+وقد يشمل لاحقًا commerce، CRM، ERP، payments، shipping، internal tools، وقنوات متعددة.
+
+هذه رؤية متعددة السنوات، وليست Scope الـMVP الحالي.
 
 ## خارج النطاق حاليًا
 
-- ادعاء AGI أو موظف مستقل بلا حدود.
-- اتخاذ قرارات مالية أو قانونية حساسة بلا مراجعة.
-- Bulk spam أو رسائل غير مرغوبة.
-- اختلاق معرفة غير موجودة.
-- وعود بأن readiness 100% تعني دقة كاملة.
+- universal execution platform؛
+- CRM/ERP كامل؛
+- generic chatbot builder؛
+- omnichannel expansion بلا دليل؛
+- marketplace/plugin ecosystem؛
+- multi-agent architecture؛
+- universal policy DSL؛
+- autonomous financial/legal actions بلا مراجعة؛
+- bulk spam؛
+- اختلاق knowledge أو provider state؛
+- بناء abstraction قبل evidence.
+
+## المقياس الذي يهم الآن
+
+> **هل Merchant حقيقي يريد من DBL Action حقيقيًا، وهل يستطيع DBL تنفيذ هذا Action بأمان؟**
+
+إذا لم يثبت Sales Execution نفسه، نغيّر الـWedge دون اعتبار foundation أو الرؤية بعيدة المدى فاشلة تلقائيًا.
