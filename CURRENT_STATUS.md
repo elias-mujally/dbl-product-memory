@@ -1,303 +1,206 @@
 # الحالة الحالية
 
-آخر تحديث: **2026-08-13**
+آخر تحديث: **2026-08-19**
 
-## ملخص سريع
+## الملخص التنفيذي
 
-DBL Employee AI تطبيق SaaS متعدد المستأجرين بواجهة عربية/إنجليزية، Knowledge Hub منظم، AI grounded على معرفة معتمدة، وWhatsApp integration يمر حاليًا بمرحلة إصلاح Production foundation قبل متابعة Contacts PR 2.
+DBL Employee AI في مرحلة **إعادة توجيه استراتيجية مضبوطة**.
 
-تم إغلاق **Contacts PR 1 — Foundation** بالكامل، وتم دمج **PR #38 — WhatsApp Account-Scope Lifecycle Guard**، ثم **PR #39 — WhatsApp Credential / Runtime Readiness**، وتم الآن كذلك دمج **PR #40 — Embedded Signup Production Diagnostics & Recovery** بعد مراجعة مستقلة نهائية دون High أو Medium findings.
+المنتج المنفذ تاريخيًا هو SaaS لموظف AI يعتمد على Knowledge معتمدة، WhatsApp، review/automatic reply modes، Contacts foundation، multi-tenancy، secure credentials، وطبقة اختبار/أمان قوية.
 
-الحالة الحالية:
+الاتجاه الجاري التحقق منه الآن أوسع وأعمق:
 
-> **PR #40 merged. Next approved operational step: controlled Production same-number reconnect to transition the legacy credential to modern Secret Manager. Meta webhook cutover remains NO-GO until reconnect/readiness verification succeeds. Contacts PR 2 and PR C remain blocked/unstarted.**
+> **AI Operational Employee / AI Business Execution Layer**
 
----
+أي أن DBL لا يكتفي بالرد، بل يقرأ الأنظمة الحقيقية ويجهز أو ينفذ أعمالًا ضمن policy deterministic، موافقة بشرية، verification، reconciliation، وaudit.
 
-## Production الحالي
+Commerce / Sales Execution هو أول Wedge مقترح فقط، وSalla أول Provider محتمل إذا توفر وصول رسمي. لا يوجد قرار ببناء منصة Execution عامة الآن.
 
-- Production app: `https://dbl-employee-ai.vercel.app`
-- current GitHub `main` after PR #40 merge: `a2ba117e78d674b17eea5a8630b2ccc141e5aaf8`
-- PR #40 reviewed head: `5488ce4485e141323e3f879e1ef28bced46251cf`
-- PR #40 squash SHA: `a2ba117e78d674b17eea5a8630b2ccc141e5aaf8`
-- PR #40: **MERGED via squash**
-- Meta webhook routing: **unchanged; still legacy Cloud Run**
-
-References:
-
-- `events/2026-08-13-pr39-whatsapp-runtime-readiness-merged.md`
-- `events/2026-08-13-pr40-embedded-signup-recovery-merged.md`
+المرجع الاستراتيجي: `STRATEGY_PIVOT_2026-08-19.md`.
 
 ---
 
-## Confirmed split-runtime
+## Current mode
 
-Read-only Production confirmation on 2026-08-12 proved:
+> **Planning freeze -> validation + technical spike -> evidence -> narrow build decision**
 
-```text
-Meta inbound webhook
-→ legacy Cloud Run service/revision
-→ historical static receipt responder
+الأولوية لم تعد إضافة features إلى chatbot/omnichannel stack. الأولوية هي إثبات أن Merchant حقيقي يريد Business Action حقيقي ويمكن لـDBL تنفيذه بأمان.
 
-Current DBL UI / server actions
-→ Vercel current main
-→ modern outbound / AI / Embedded Signup code
-```
+### المطلوب قبل build كبير
 
-Classification:
+1. حل مسار الوصول الرسمي إلى Salla أو Provider أول مناسب.
+2. مقابلة نحو 10–20 Merchant حقيقيين في فئات تعتمد على pre-purchase conversation.
+3. إجراء provider read spike على products/variants/inventory عندما يتوفر الوصول.
+4. اختيار أقل write action مخاطرة بناءً على API حقيقي، لا افتراض نظري.
+5. اختبار Wizard-of-Oz أو prototype ضيق مع Human Approval.
+6. البناء فقط إذا ظهرت قيمة اقتصادية ورغبة فعلية في الاستخدام/الدفع.
 
-`CONFIRMED_LEGACY_CLOUD_RUN`
+---
 
-The active Meta WhatsApp callback is still the old Cloud Run endpoint, not the canonical Vercel webhook.
+## الحالة البرمجية الحالية
 
-Cloud Run service `dbl-employee-ai-git` still sends 100% traffic to legacy revision `00024`, which contains the retired static responder:
+### Application main
+
+آخر commit معروف على `main` وقت مزامنة الذاكرة:
+
+`b9d891a30040151ff2105ed219d67720af0f0b7c`
+
+وهو commit توثيقي لإزالة نسخة strategy record وُضعت بالخطأ في مستودع التطبيق. آخر functional WhatsApp merge قبله هو:
+
+`ede862e60bf1ace67a1e3fbb49d1e3f3d4bc7caf` — PR #42.
+
+تحقق من GitHub عند أي مهمة جديدة؛ لا تعتبر SHA هنا ثابتًا.
+
+### WhatsApp PRs المهمة المدمجة
+
+- PR #38: Account-Scope Lifecycle Guard.
+- PR #39: Credential / Runtime Readiness.
+- PR #40: Embedded Signup Production Diagnostics & Recovery.
+- PR #41: privacy-safe asset-event diagnostics.
+- PR #42: split malformed asset-event shape diagnostics.
+
+هذه السلسلة أغلقت عدة races وحمت account scope والcredential lifecycle، لكنها لم تجعل الرقم الحقيقي Production-ready.
+
+### PR #43 — Test WhatsApp Scope Cleanup
+
+آخر تحقق:
+
+- Draft / Open / Unmerged.
+- head: `b9b4c0ed490aeeba0c4dc65fb5e4eaaf48661396`.
+- base قديم مقارنة بـmain الحالي.
+- الغرض: migration/operator-only cleanup mechanism خاملة لا تنفذ الحذف تلقائيًا.
+
+**لا تدمج PR #43 كما هو دون إعادة base/CI/review.**
+
+والأهم: حتى دمج PR #43 لا يعني إذنًا بتنفيذ cleanup على Production. أي cleanup يحتاج preflight + snapshot + restore rehearsal + explicit authorization منفصل.
+
+---
+
+## WhatsApp Production — ما ثبت فعليًا
+
+### الاتصال الحالي
+
+ثبت أن اتصال DBL الحالي في Production يشير إلى:
+
+- Meta Test WhatsApp Business Account.
+- Meta Test Number.
+- legacy environment credential.
+- test-only customer/contact/conversation/message history.
+
+البيانات المرتبطة به التي تم تدقيقها كانت كلها اختبارية من المالك، ولا يوجد دليل على real customer activity داخل هذا scope.
+
+### الرقم الحقيقي
+
+الرقم الحقيقي مختلف عن test number ومسجل كـWhatsApp Business App number.
+
+Meta تعرض أنه مسجل كحساب WhatsApp بالفعل، ولذلك Standard Cloud API registration / standard Embedded Signup ليس المسار الصحيح له في حالته الحالية.
+
+### الاتجاه المفضل
+
+إذا بقيت رغبة المالك في استخدام WhatsApp Business App مع DBL على نفس الرقم، فالاتجاه المفضل هو **WhatsApp Business App Coexistence**، بشرط إثبات أهلية Meta والحصول على المتطلبات اللازمة.
+
+Coexistence لم يُنفذ بعد في DBL.
+
+### Multi-connection
+
+بعد تدقيق test scope، تبين أن full Multi-Connection Foundation يمكن تأجيله إذا تم تنظيف test scope بأمان ثم أصبح الرقم الحقيقي هو الاتصال الوحيد في MVP.
+
+هذا قرار تكتيكي لتقليل التعقيد، وليس قرارًا بإلغاء multi-connection مستقبلًا.
+
+---
+
+## Split runtime / legacy Cloud Run
+
+Meta inbound webhook ما يزال تاريخيًا موجهًا إلى legacy Cloud Run الذي يحتوي الرد الثابت القديم:
 
 > تم استلام رسالتك بنجاح من DBL Employee AI ✅
 
-Reference:
+هذا يفسر الرد الثابت وهو **مشكلة تشغيلية منفصلة عن Embedded Signup eligibility**.
 
-`events/2026-08-12-meta-webhook-legacy-cloud-run-confirmed.md`
+Webhook cutover يظل **NO-GO** حتى:
 
----
-
-## PR #39 — WhatsApp Credential / Runtime Readiness — MERGED
-
-PR #39 made outbound readiness server-authoritative and separated provider connection status from actual runtime send readiness.
-
-Key behavior:
-
-- legacy `env:WHATSAPP_ACCESS_TOKEN` connection remains Connected historically but is not considered outbound-ready;
-- owner/admin are guided to reconnect the same number;
-- manual permanent readiness failures block before durable reservation;
-- repeated manual attempts do not create duplicate outbound requests/messages/attempts or consume quota;
-- late readiness/provider validation remains for TOCTOU protection;
-- automatic outbound remains fail-closed for legacy credentials;
-- modern `gcp-sm://` credentials classify as ready when accessible.
-
-Reviewed head:
-
-`e7a3d50b7d2b2328cd6bfc7d2c91231c6efc2d7b`
-
-Squash SHA:
-
-`7f5d78ee3441be4cce8c8671992f08cb98b43717`
+- وجود اتصال Production حقيقي؛
+- modern credential في Secret Manager؛
+- outbound readiness مثبت؛
+- Vercel inbound verification مكتمل؛
+- event subscriptions المطلوبة جاهزة؛
+- rollback plan معتمد.
 
 ---
 
-## PR #40 — Embedded Signup Production Diagnostics & Recovery — MERGED
+## Contacts
 
-### الهدف
+Contacts Foundation PR 1 مدموجة وموجودة.
 
-PR #40 does not guess the external Meta/browser cause of the previously observed callback-without-code behavior. Instead it makes Embedded Signup diagnosable, recoverable, and browser-safe enough for a separately controlled same-number reconnect.
+لكن Contacts PR 2 لم يعد هو next product priority تلقائيًا. لا يبدأ إلا إذا أصبح prerequisite مباشرًا لفرضية Execution/Commerce أو عاد المنتج إلى مسار يحتاجه.
 
-### Browser lifecycle / diagnostics
-
-- privacy-safe lifecycle stages added for SDK, preparation, login, callback, authorization, asset event, completion, failure, and unknown outcomes;
-- cancellation, Meta error, missing code, missing asset event, popup uncertainty, completion failure, and ambiguous completion are distinguished without exposing provider payloads;
-- `FB.login()` remains synchronous inside the genuine user click;
-- missing asset-event wait is bounded rather than indefinite;
-- authorization codes remain in memory only and are never logged/persisted client-side.
-
-### Cross-attempt isolation
-
-Independent review discovered two Medium issues before merge:
-
-1. delayed Meta FINISH events could cross attempts because Meta does not echo a DBL attempt nonce;
-2. the first isolation design keyed the launch fence by URL fragment, allowing same-tab fragment changes to restore launch eligibility.
-
-Final invariant:
-
-> **One browsing context may launch Embedded Signup at most once.**
-
-The authoritative browser fence uses one fixed sessionStorage marker:
-
-`dbl_whatsapp_embedded_signup_context_consumed`
-
-It is independent of fragment, actor, workspace, session, provider asset, or URL.
-
-After the first launch, the same browsing context remains fenced across:
-
-- fragment replacement/removal;
-- reload;
-- React remount;
-- SPA/navigation return;
-- manually pasting a fresh recovery URL into the same tab.
-
-Recovery requires a genuinely new `noopener noreferrer` browsing context.
-
-The URL fragment is now non-authoritative UX metadata only.
-
-### Storage safety
-
-Before `FB.login()` the marker is synchronously written and read back.
-
-If sessionStorage is unavailable or persistence cannot be proven, launch fails closed and Meta is not invoked.
-
-### Cross-browser validation
-
-Real-browser isolation passed:
-
-- Chromium: 5/5
-- Firefox: 5/5
-- WebKit: 5/5
-
-A→B→C recovery, stale FINISH/callback isolation, same-tab fragment bypass, reload, and noopener storage isolation all passed.
-
-### Final review
-
-Reviewed head:
-
-`5488ce4485e141323e3f879e1ef28bced46251cf`
-
-Result:
-
-- High: **0**
-- Medium: **0**
-- Production merge risk: **Low (2/10)**
-- Focused Embedded Signup: 57 passed
-- Vitest: 489 passed, 5 skipped
-- authenticated E2E: 17 passed
-- multi-browser isolation: 15 passed
-- pgTAP: 466 passed
-- T1–T7: passed
-- completion service contract: 5 passed
-- Vercel Preview: READY
-
-### Merge
-
-- squash SHA: `a2ba117e78d674b17eea5a8630b2ccc141e5aaf8`
-- merge method: squash with exact-head protection
-- GitHub confirmed successful merge
-
-### Remaining Low debt
-
-- recovery uses an additional tab/window;
-- storage-disabled browsers fail safely but lack dedicated storage-specific guidance;
-- browser-isolation tests use production helpers rather than a fully mounted wizard;
-- real Meta popup/callback behavior still needs controlled Production verification.
+الـContacts الحالية لا تُهدم؛ تعتبر جزءًا من foundation القابلة لإعادة الاستخدام.
 
 ---
 
-## Late-discovered production issues
+## ما تم تجميده استراتيجيًا
 
-Reference:
+حتى إثبات Execution hypothesis، لا توسع:
 
-`LATE_DISCOVERED_ISSUES.md`
+- WhatsApp broadcast/campaigns؛
+- chatbot builders؛
+- قنوات إضافية؛
+- CRM/ERP داخل DBL؛
+- multi-agent orchestration؛
+- universal workflow builder؛
+- marketplace/plugins؛
+- universal policy DSL؛
+- multi-model routing غير الضروري؛
+- Zid/Shopify/WooCommerce قبل provider evidence.
 
-### LDI-001 — Static WhatsApp acknowledgement
+المبدأ:
 
-**Root cause: CONFIRMED.**
-
-Legacy Cloud Run still owns inbound Meta webhook traffic and still contains `receipt-reply.ts`.
-
-Status:
-
-**Awaiting successful same-number reconnect + controlled webhook cutover.**
-
-### LDI-002 — Embedded Signup authorization incomplete
-
-**Software diagnostics/recovery fix merged in PR #40; external Meta/browser cause still requires controlled live reproduction.**
-
-The application can now distinguish lifecycle stages and recover safely without guessing the external cause.
-
-Status:
-
-**Next step: controlled Production same-number reconnect after Vercel Production is READY on PR #40 squash SHA.**
-
-### LDI-003 — Manual outbound failure
-
-**Root cause confirmed; PR #39 code fix merged; operational credential transition still pending.**
-
-Production connection still references legacy:
-
-`env:WHATSAPP_ACCESS_TOKEN`
-
-PR #39 prevents false-ready state and impossible send attempts. Operational closure requires successful same-number reconnect so the credential becomes modern `gcp-sm://...` and readiness becomes `ready`.
-
-### LDI-004 — Onboarding response-mode impossible state
-
-**Root cause: CONFIRMED; awaiting PR C.**
-
-No PR C work has started.
+> **Preserve infrastructure, replace product emphasis.**
 
 ---
 
-## Immediate webhook cutover decision
+## العوائق الخارجية الحالية
 
-**NO-GO remains in force.**
+### Meta
 
-PR #40 being merged does not authorize webhook cutover.
+- Business Verification / Tech Provider / Advanced Access / coexistence eligibility ما تزال غير مكتملة أو غير مثبتة بما يكفي للإطلاق الخارجي.
+- Meta لا يجب أن تمنع اختبار core execution thesis؛ استخدم قناة web/internal/semi-manual إذا لزم.
 
-Before cutover:
+### Salla
 
-1. Vercel Production must be READY on `a2ba117e78d674b17eea5a8630b2ccc141e5aaf8`.
-2. Config ending `1674` must be reconfirmed.
-3. Existing connection/account scope must be inspected read-only.
-4. Owner/admin must perform a controlled reconnect of the SAME receiving number only.
-5. Credential reference must transition to modern `gcp-sm://...`.
-6. PR #39 readiness must become `ready`.
-7. Account scope and historical customers/Contacts/identities/conversations/messages must remain unchanged.
-8. Stop on any different-number conflict or ambiguous completion.
+- مسار الشركة يطلب وثائق شركة.
+- مسار الشخص للنشر يطلب وثيقة عمل حر سعودية بحسب ما ظهر في التسجيل.
+- لم يثبت بعد أن non-Saudi developer لا يستطيع الحصول على dev/test access.
 
-Only after this operational transition is verified may a separate webhook cutover plan be reviewed.
+المطلوب: تحديد المسار الرسمي للمطور غير السعودي أو الوصول التجريبي دون نشر عام. لا تستخدم مستندات مزيفة.
 
----
+### Market evidence
 
-## Approved repair sequence
+الدليل الحالي يثبت دفع التجار لأتمتة مجاورة، لكنه لا يثبت بعد willingness-to-pay لـAI-driven business execution.
 
-### PR A — WhatsApp credential/runtime readiness — MERGED as PR #39
-
-Completed.
-
-### PR B — Embedded Signup Production diagnostics and recovery — MERGED as PR #40
-
-Completed in code and independently reviewed.
-
-### Controlled same-number Production reconnect — NEXT
-
-Purpose:
-
-- move the existing legacy credential reference to modern Secret Manager through the reviewed Embedded Signup flow;
-- preserve the same receiving account scope and all historical data;
-- prove PR #39 outbound readiness becomes ready.
-
-This is an operational action, not a new feature PR.
-
-### Controlled operational Meta webhook cutover — AFTER RECONNECT VERIFICATION
-
-Only after modern credential readiness is proven.
-
-### PR C — Onboarding response-mode state machine
-
-Still pending and unstarted.
-
-### Contacts PR 2
-
-Resume only after messaging foundation and webhook cutover are production-verified.
+هذا هو أكبر blocker معرفي للمنتج الآن.
 
 ---
 
-## Contacts foundation remains intact
+## القرار التنفيذي الحالي
 
-Contacts PR 1 remains closed and production-verified:
+لا تبنِ Operational Layer كاملة.
 
-- `contacts`
-- `contact_channel_identities`
-- legacy compatibility via `legacy_customer_id`
-- Contacts UI remains disabled
-- no Contacts PR 2 dual-write has started
+الهدف التالي هو:
 
-The temporary PR1→PR2 gap remains acceptable only while Contacts runtime/UI remains disabled.
+> **إثبات أن Merchant واحدًا يريد Action واحدًا حقيقيًا من DBL وأن DBL يستطيع تجهيز/تنفيذ هذا Action بأمان.**
+
+Merchant evidence الآن أهم من المزيد من advisor reports.
 
 ---
 
 ## لا تفعل الآن
 
-- لا تغيّر Meta webhook callback الآن.
-- لا توقف Cloud Run القديم الآن.
-- لا تعمل blind retry إذا كانت نتيجة reconnect غامضة.
-- لا تربط رقمًا مختلفًا عن الرقم الحالي.
-- لا ترسل رسالة اختبار حقيقية قبل authorization منفصل.
-- لا تبدأ Contacts PR 2.
-- لا تبدأ PR C داخل هذه المرحلة التشغيلية.
-- لا تنقل legacy token values يدويًا.
+- لا تعمل blind reconnect للـTest WABA.
+- لا تستبدل Test WABA/phone identifiers بالرقم الحقيقي داخل نفس historical scope.
+- لا تنفذ PR #43 cleanup على Production دون authorization مستقل.
+- لا تعمل webhook cutover.
+- لا تبدأ general multi-connection فقط لأن architecture المستقبلية قد تحتاجها.
+- لا تبدأ Contacts PR 2 أو PR C كأولوية تلقائية.
+- لا تبنِ Salla abstraction عامة قبل provider spike حقيقي.
+- لا تجعل WhatsApp blocker سببًا لتأجيل merchant validation.
