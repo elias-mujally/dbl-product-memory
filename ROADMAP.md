@@ -1,158 +1,302 @@
 # خارطة الطريق
 
-آخر تحديث: 2026-08-05
+آخر تحديث: **2026-08-19**
 
-## المرحلة الحالية: تثبيت Knowledge approval workflow
+## المبدأ الحاكم
 
-### PR #35
+المرحلة الحالية ليست Feature Expansion.
 
-المطلوب قبل الدمج:
+المرحلة الحالية:
 
-- دفع إصلاح idempotency key لعملية “Save and add another”.
-- تشغيل CI على الرأس الجديد.
-- مراجعة مستقلة نهائية.
-- squash merge عند عدم وجود High/Medium findings.
-- تحقق إنتاجي من الأدوار، review queue، retries، ومنع duplicates.
+> **Validation + technical spike + evidence -> narrow build decision**
 
-## المرحلة التالية مباشرة
+لا نبني Execution Platform عامة قبل إثبات Merchant واحد + Action واحد + Provider واحد.
 
-### 1. إكمال الترجمة الأساسية
+---
 
-المسارات المؤجلة أو غير المكتملة:
+# المرحلة 0 — Memory / strategy synchronization
 
-- Contacts
-- Analytics
-- Subscription
-- Appearance & Language
-- Privacy inside Settings
+الحالة: **مكتملة في 2026-08-19**
 
-### 2. إظهار Language selector
+- اعتماد `STRATEGY_PIVOT_2026-08-19.md` كمرجع استراتيجي فعال.
+- مزامنة `README`, `AI_HANDOFF`, `CURRENT_STATUS`, `VISION`, `ROADMAP`, `BLOCKERS` مع الاتجاه الجديد.
+- منع الملفات القديمة من إعادة المشروع تلقائيًا إلى chatbot/omnichannel roadmap.
 
-لا يظهر إلا بعد اكتمال ترجمة الصفحات الأساسية.
+---
 
-المطلوب:
+# المرحلة 1 — Market validation
 
-- Arabic / English
-- حفظ preference
-- SSR صحيح
-- RTL/LTR
-- فصل UI language عن AI reply language
+الحالة: **الأولوية الأولى**
 
-### 3. Theme controls
+## الهدف
 
-- Light
-- Dark
-- System
-- ترحيل الألوان الثابتة إلى semantic tokens
-- Visual regression tests
-- عدم إظهار Dark قبل اكتمال component migration
+إثبات أو قتل فرضية Commerce / Sales Execution قبل build كبير.
 
-### 4. Meta readiness
+## المطلوب
 
-بعد Business Verification:
+مقابلة نحو 10–20 Merchant حقيقيين، ويفضل في:
 
-- إكمال Independent Tech Provider qualification.
-- مراجعة إعدادات التطبيق.
-- تسجيل فيديوهات App Review.
-- طلب Advanced Access:
-  - whatsapp_business_management
-  - whatsapp_business_messaging
-- إضافة App icon معتمد 1024×1024.
-- تثبيت Privacy/Terms/Data Deletion URLs في Meta.
-- إعادة اختبار Embedded Signup config المنتهي بـ1674.
+- fashion / abayas؛
+- shoes؛
+- beauty / perfumes؛
+- accessories؛
+- selected electronics.
 
-### 5. WhatsApp production customer onboarding
+## الأسئلة الأساسية
 
-- اختبار FINISH event الحقيقي.
-- التحقق من WABA/phone metadata.
-- code exchange.
-- token storage في dedicated Secret Manager project.
-- app subscription وphone registration.
-- reconnect/disconnect.
-- token expiration lifecycle.
-- account_update handling.
+- لماذا يتواصل العميل قبل الشراء؟
+- من يرد اليوم؟
+- ماذا يحدث بعد اقتناع العميل؟
+- هل ينشئ الموظف طلبًا أو يرسل link يدويًا؟
+- ما أكثر خطوة تستهلك وقتًا؟
+- أين تضيع المبيعات؟
+- ما الأدوات المدفوعة حاليًا؟
+- هل merchant يقبل read access؟
+- هل يقبل write action محدودًا مع Human Approval؟
+- أيهما أفضل في workflow الحقيقي: Draft Order أم prepared checkout أم شيء آخر؟
+- ما الذي سيجعل merchant يحذف المنتج بسرعة؟
+- ما قيمة الحل إذا أثبت توفير وقت أو إيراد؟
 
-## Backlog قريب
+## مخرج المرحلة
 
-### Knowledge Phase 2
+واحد من:
 
-- Unified business profile editor.
-- Review queue refinements.
-- Add multiple FAQs faster.
-- Attention-needed panel.
-- Logo upload بعد تصميم storage صحيح.
-- Product images.
-- Product variants/categories.
-- Bulk import.
-- First-class exchange policy enum.
+- Sales Execution pain مثبت؛
+- Wedge مختلفة داخل commerce؛
+- commerce ضعيف وننتقل لفرضية أخرى.
 
-### Product experience
+لا يعتبر عدم نجاح Sales Execution فشلًا للfoundation.
 
-- First-run experience.
-- Guided checklist.
-- AI employee test chat.
-- Knowledge gaps suggestions.
-- Better “what next?” CTAs.
-- Product favicon.
+---
 
-### Team and organization
+# المرحلة 2 — Provider access + read spike
 
-- Team member management UI.
-- Invitations.
-- Roles and permissions UX.
-- Activity history.
-- Workspace switching إذا دُعم أكثر من Workspace.
+الحالة: **بالتوازي مع validation**
 
-### Commercial
+## Salla
 
-- Subscription page.
-- Pricing model.
-- Payment provider.
-- Usage limits.
-- Upgrade/downgrade.
-- Invoices.
+المطلوب أولًا:
 
-### Analytics
+- تحديد المسار الرسمي لمطور/مؤسس غير سعودي؛
+- معرفة هل dev/test API access متاح دون public app publication؛
+- عدم استخدام وثائق شركة أو عمل حر غير صحيحة.
 
-- Conversation volume.
-- Response time.
-- AI vs human handoff.
-- Top customer questions.
-- Knowledge gaps.
-- Leads and conversions.
-- Failed/uncertain replies.
+إذا توفر الوصول:
 
-## Backlog متوسط المدى
+### Read spike
 
-- Instagram integration.
-- Facebook Messenger.
-- Web chat widget.
-- CRM integrations.
-- Calendar/booking.
-- Ecommerce catalogs.
-- Templates by business type.
-- Multi-agent architecture.
+اختبار موثوق لـ:
 
-## قواعد ترتيب الأولويات
+- products؛
+- variants؛
+- inventory؛
+- price؛
+- order data فقط عند الحاجة.
 
-1. الأمان وعدم فقدان البيانات.
-2. إكمال تدفق العميل الأساسي.
-3. إزالة الالتباس قبل إضافة ميزات جديدة.
-4. تجربة صاحب المشروع غير التقني.
-5. الجاهزية للإيرادات.
-6. التوسع متعدد القنوات بعد استقرار WhatsApp.
+## قاعدة
 
-## تعريف MVP الحقيقي
+لا Provider abstraction عامة في هذه المرحلة.
 
-لا نعتبر المنتج MVP جاهزًا للبيع حتى يتحقق:
+نفذ Salla مباشرة، ثم استخرج abstraction عندما يظهر Provider ثانٍ.
 
-- تسجيل ودخول موثوق.
-- Workspace onboarding واضح.
-- AI employee customization.
-- Knowledge سهلة ومنظمة.
-- WhatsApp Embedded Signup يعمل للعميل الخارجي.
-- إرسال واستقبال وردود آمنة.
-- Review/auto modes واضحة.
-- صفحات قانونية.
-- Subscription/payment path.
-- دعم وتشخيص أساسي.
+## مخرج المرحلة
+
+- provider access مثبت أو مستبعد؛
+- read semantics موثوقة؛
+- limitations موثقة؛
+- candidate write actions مستخرجة من API الحقيقي.
+
+---
+
+# المرحلة 3 — اختيار Action الأول
+
+لا يُحسم قبل المرحلتين 1 و2.
+
+Candidates تشمل:
+
+- Draft Order؛
+- prepared/prefilled checkout؛
+- cart recovery action؛
+- another low-risk provider-supported action.
+
+## معايير الاختيار
+
+Action الأول يجب أن يكون:
+
+- meaningful اقتصاديًا؛
+- low-risk نسبيًا؛
+- قابلًا للموافقة البشرية؛
+- قابلًا للتحقق بعد التنفيذ؛
+- idempotency/reconciliation ممكنة؛
+- لا يحتاج universal workflow engine.
+
+---
+
+# المرحلة 4 — Wizard-of-Oz / semi-manual prototype
+
+قبل full automation:
+
+```text
+merchant/customer intent
+-> DBL/assistant interprets
+-> provider data read
+-> action proposal
+-> merchant approve/reject
+-> manual or narrow controlled execute
+-> verify outcome
+-> measure correction/time/value
+```
+
+## القياسات
+
+- كم مرة احتاج merchant تصحيح proposal؟
+- كم وقت وفر؟
+- هل workflow أسرع من manual؟
+- هل merchant يثق في Human Approval model؟
+- هل يعود لاستخدامه؟
+- هل يدفع؟
+
+---
+
+# المرحلة 5 — Narrow execution beta
+
+تبدأ فقط إذا evidence إيجابي.
+
+## Architecture minimal
+
+ابدأ بنموذج صغير مثل:
+
+- `execution_request`
+- `execution_event` فقط إذا أثبتت الحاجة.
+
+## قواعد
+
+- deterministic policies؛
+- L1 / approval-before-write؛
+- explicit ambiguous outcome؛
+- reconcile before retry؛
+- audit trail؛
+- no automatic high-risk execution.
+
+---
+
+# WhatsApp / Meta track — parallel, not gating PMF
+
+WhatsApp يظل قناة مهمة لكنه لا يجب أن يوقف validation.
+
+## الوضع الحالي
+
+- current Production connection = Test WABA/Test Number.
+- real number = WhatsApp Business App number.
+- standard Embedded Signup ليس المسار الصحيح للرقم الحقيقي.
+- coexistence هو direction محتمل إذا Meta eligibility متوفرة.
+- legacy Cloud Run webhook ما يزال قائمًا.
+
+## PR #43
+
+Draft cleanup mechanism للـtest scope.
+
+لا تدمج أو تنفذ تلقائيًا. يحتاج rebase/exact-head CI/security review جديد قبل أي قرار.
+
+## قبل live real-number onboarding
+
+- تنظيف test scope بأمان أو قرار أحدث معتمد؛
+- confirm coexistence eligibility؛
+- satisfy required Meta permissions/partner gates؛
+- modern Secret Manager credential؛
+- controlled verification.
+
+## webhook cutover
+
+يبقى NO-GO حتى real connection + inbound/outbound readiness + rollback plan.
+
+إذا تأخر Meta، استخدم web/internal/semi-manual channel لاختبار execution thesis.
+
+---
+
+# Foundation التي نحافظ عليها
+
+لا نهدم بلا سبب:
+
+- authentication؛
+- workspaces/multi-tenancy؛
+- Supabase/PostgreSQL؛
+- RLS/security boundaries؛
+- credential handling؛
+- Knowledge foundation؛
+- Contacts foundation؛
+- localization؛
+- CI/tests؛
+- idempotency/reconciliation؛
+- audit patterns.
+
+---
+
+# مؤجل حتى دليل جديد
+
+- Contacts PR 2 كأولوية مستقلة؛
+- PR C onboarding response-mode؛
+- Analytics expansion؛
+- subscription polish؛
+- Instagram/Facebook/TikTok channels؛
+- broadcast campaigns؛
+- generic chatbot builder؛
+- CRM/ERP؛
+- multi-agent؛
+- workflow builder؛
+- marketplace/plugins؛
+- universal policy DSL؛
+- multi-model routing؛
+- provider expansion قبل evidence.
+
+قد يعود أي منها إلى الأولوية إذا أصبح prerequisite مباشرًا للـwedge المثبتة.
+
+---
+
+# بوابات القرار
+
+## GO للبناء
+
+إشارات إيجابية:
+
+- pain متكرر في مقابلات التجار؛
+- workflow يدوي واضح؛
+- merchant يسمح read access؛
+- merchant يسمح limited write مع approval؛
+- provider API يدعم Action مفيدًا؛
+- correction rate منخفض بما يكفي؛
+- وقت/إيراد محسّن؛
+- willingness to continue/pay.
+
+## Pivot للـWedge
+
+إذا:
+
+- merchant لا يريد action حتى مع approval؛
+- workflow يصبح أبطأ؛
+- conversation ليست مدخلًا طبيعيًا؛
+- API لا يسمح execution مفيدًا؛
+- القيمة الاقتصادية صغيرة؛
+- pain مختلف يتكرر بقوة.
+
+---
+
+# North Star بعيدة المدى
+
+إذا أثبت Commerce execution نفسه:
+
+```text
+one useful action
+-> several commerce actions
+-> second provider
+-> real abstraction
+-> commerce operations
+-> additional systems
+-> AI Operational Layer
+```
+
+هذه ليست خطة تنفيذ فورية.
+
+## تعريف milestone الحالي
+
+> **Merchant واحد يريد Action واحدًا، وDBL يستطيع تنفيذ هذا Action بأمان.**
