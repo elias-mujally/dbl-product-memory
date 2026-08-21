@@ -1,85 +1,119 @@
 # DBL Product Memory
 
-هذه هي الذاكرة المؤسسية الرسمية لمنتج **DBL Employee AI** ولمبادرات المنتجات الاستراتيجية المهمة في DBL.
+هذا المستودع هو **الذاكرة المؤسسية العامة لمنتجات Digital Blueprint Lab (DBL)**.
 
-الهدف من هذا المستودع هو حفظ الرؤية، الحالة الحالية، القرارات، تاريخ البناء، المشاكل، العوائق، الأفكار الاستراتيجية المهمة، ونقطة الاستئناف لأي مساعد AI أو عضو فريق جديد.
+وظيفته حفظ سياق كل منتج أو مبادرة مهمة داخل DBL بحيث يستطيع أي مساعد AI أو عضو فريق جديد فهم:
 
-> مستودع التطبيق الرئيسي هو `elias-mujally/dbl-employee-ai`. هذا المستودع يوثق النية والسياق والقرارات، ولا يستبدل Git history أو الكود كمصدر حقيقة للتنفيذ.
+- ما هو المنتج؟
+- ما المشكلة التي يحلها؟
+- ما رؤيته الحالية؟
+- ما الذي تم تنفيذه فعليًا؟
+- لماذا اتخذت القرارات المهمة؟
+- ما خارطة الطريق؟
+- ما العوائق والمخاطر؟
+- أين توقف العمل؟
+- ما الذي يجب قراءته قبل استئناف التنفيذ؟
+
+> هذا المستودع ليس مستودع كود، ولا يستبدل Git history أو مستودعات التطبيقات أو بيانات Production كمصدر حقيقة لحالة التنفيذ.
+
+---
 
 ## ابدأ من هنا
 
-لأي مساعد AI أو مطور جديد يعمل على **DBL Employee AI**، اقرأ بالترتيب:
+لأي مساعد AI أو عضو فريق يعمل عبر DBL عمومًا:
 
-1. [AI_HANDOFF.md](AI_HANDOFF.md)
-2. [CURRENT_STATUS.md](CURRENT_STATUS.md)
-3. [STRATEGY_PIVOT_2026-08-19.md](STRATEGY_PIVOT_2026-08-19.md)
-4. [VISION.md](VISION.md)
-5. [ROADMAP.md](ROADMAP.md)
-6. [DECISIONS.md](DECISIONS.md)
-7. [PROBLEMS_AND_SOLUTIONS.md](PROBLEMS_AND_SOLUTIONS.md)
-8. [LATE_DISCOVERED_ISSUES.md](LATE_DISCOVERED_ISSUES.md)
-9. [CHANGELOG.md](CHANGELOG.md)
-10. [BLOCKERS.md](BLOCKERS.md)
-11. [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md)
+1. اقرأ [PORTFOLIO_HANDOFF.md](PORTFOLIO_HANDOFF.md).
+2. اختر المنتج المطلوب من مجلد [`products/`](products/).
+3. اقرأ `README.md` ثم `AI_HANDOFF.md` داخل مجلد المنتج.
+4. لا تستخدم ملفات منتج آخر لتخمين حالة المنتج الحالي.
+5. إذا كان السؤال عن التنفيذ الفعلي، تحقق من مستودع الكود الخاص بذلك المنتج.
 
-وللمهام المعمارية المتخصصة، اقرأ الملف الخاص بالنظام مثل [CONTACTS_ARCHITECTURE.md](CONTACTS_ARCHITECTURE.md).
+---
 
-## مبادرات منتجات DBL قيد الدراسة
+## المنتجات والمبادرات الحالية
 
-هذه الملفات تسجل أفكار منتجات مهمة بما يكفي لتكون مرجعًا دائمًا، لكنها **لا تعني أن المنتج منفذ أو أنه أصبح أولوية التنفيذ الحالية**.
+### 1. DBL Employee AI
 
-- [PRODUCT_CONCEPT_LEGACY_ERP_INTELLIGENCE_2026-08-21.md](PRODUCT_CONCEPT_LEGACY_ERP_INTELLIGENCE_2026-08-21.md) — دراسة ورؤية **Local-First Legacy ERP Intelligence Layer**: طبقة ذكاء محلية فوق أنظمة ERP/المحاسبة القديمة، مع خطة MVP، دراسة السوق العربي والعالمي بتاريخ 2026-08-21، المعمارية، المخاطر، الـmoat، الفريق، والتوسع المستقبلي.
+المجلد: [`products/employee-ai/`](products/employee-ai/)
 
-## أولوية المصادر عند التعارض
+الحالة: منتج قائم وله مستودع كود مستقل وتاريخ تنفيذ فعلي.
 
-إذا تعارضت ملفات الذاكرة، استخدم هذا الترتيب:
+الرؤية الحالية: AI Operational Employee / AI Business Execution Layer قيد التحقق.
 
-1. `CURRENT_STATUS.md` للحالة التنفيذية الحالية.
-2. `STRATEGY_PIVOT_2026-08-19.md` للاتجاه الاستراتيجي الحالي ولماذا تغير.
-3. `VISION.md` للرؤية بعيدة المدى.
-4. `ROADMAP.md` لترتيب العمل الحالي.
-5. الملفات التاريخية و`CHANGELOG.md` لفهم كيف وصلنا إلى هنا.
+مستودع التطبيق:
+`elias-mujally/dbl-employee-ai`
 
-ملفات `PRODUCT_CONCEPT_*` توثق **مبادرات قيد الدراسة** ولا تتغلب على حالة التنفيذ الحالية أو Roadmap المنتج الرئيسي ما لم يتم اعتمادها لاحقًا بقرار صريح.
+---
 
-إذا تعارضت الذاكرة مع حالة GitHub/Production الفعلية، تحقق من المستودع والإنتاج ثم حدّث الذاكرة. لا تجعل وثيقة قديمة تتغلب على دليل أحدث.
+### 2. Legacy Intelligence
 
-## الحالة الاستراتيجية الحالية
+المجلد: [`products/legacy-intelligence/`](products/legacy-intelligence/)
 
-منذ 2026-08-19، لم يعد الافتراض الرئيسي أن ميزة DBL الدفاعية هي مجرد:
+الحالة: مبادرة منتج قيد التحقق والتخطيط ولم يبدأ مستودع كود مستقل لها بعد.
 
-> AI Employee + WhatsApp + Knowledge + automation
+الرؤية: Local-First Vendor-Neutral Intelligence & Action Layer فوق الأنظمة القديمة والمحلية، مع تطور مستقبلي نحو Universal Legacy Intelligence Runtime وIndustry Packs.
 
-الاتجاه الجاري التحقق منه هو:
+---
 
-> **AI Operational Employee / AI Business Execution Layer**
+## الهيكل القياسي لكل منتج
 
-أي أن DBL لا يكتفي بالكلام عن العمل، بل يقرأ الأنظمة الحقيقية ويجهز أو ينفذ أعمالًا ضمن سياسات وصلاحيات وموافقة وتحقيق وتدقيق.
+كل منتج داخل `products/<product-slug>/` يجب أن يملك على الأقل:
 
-هذه **North Star** وليست إذنًا لبناء منصة تنفيذ عامة الآن. أول فرضية اختبار هي Commerce / Sales Execution، مع Salla كأول Provider محتمل إذا توفر وصول رسمي. Merchant evidence يسبق التوسع الهندسي.
+- `README.md` — تعريف المنتج ونقطة الدخول.
+- `AI_HANDOFF.md` — ملخص سريع لأي مساعد AI أو عضو فريق جديد.
+- `VISION.md` — الرؤية بعيدة المدى والـNorth Star.
+- `ROADMAP.md` — ترتيب المراحل والعمل المخطط.
+- `DECISIONS.md` — القرارات الدائمة ولماذا اتُخذت.
 
-## الروابط الأساسية
+وعند الحاجة يمكن إضافة:
 
-- التطبيق الإنتاجي: `https://dbl-employee-ai.vercel.app`
-- المستودع البرمجي: `https://github.com/elias-mujally/dbl-employee-ai`
-- الموقع التسويقي: `https://dblab.site`
-- مستودع الذاكرة: `https://github.com/elias-mujally/dbl-product-memory`
+- `CURRENT_STATUS.md`
+- `BLOCKERS.md`
+- `CHANGELOG.md`
+- `PROBLEMS_AND_SOLUTIONS.md`
+- `LATE_DISCOVERED_ISSUES.md`
+- `MARKET_STUDY_<DATE>.md`
+- `ARCHITECTURE.md`
+- ملفات subsystem متخصصة.
 
-## قواعد التحديث
+ليس كل منتج بحاجة إلى كل ملف منذ اليوم الأول. أنشئ الملف عندما يصبح له محتوى مهم يستحق الحفظ.
 
-بعد كل PR مهم أو قرار كبير:
+---
 
-- حدّث `CURRENT_STATUS.md` إذا تغيرت نقطة الاستئناف.
-- حدّث `ROADMAP.md` إذا تغير ترتيب الأولويات.
-- حدّث `VISION.md` فقط عند تغير الرؤية بعيدة المدى.
-- أضف بندًا إلى `CHANGELOG.md` للمراحل المهمة.
-- أضف القرار إلى `DECISIONS.md` إذا كان معماريًا أو تجاريًا دائمًا.
-- حدّث `BLOCKERS.md` إذا ظهر أو اختفى عائق.
-- أضف المشكلة إلى `LATE_DISCOVERED_ISSUES.md` إذا ظهرت في الاستخدام الفعلي ولم يغلق سببها وحلها بعد.
-- بعد تأكيد السبب والحل والتحقق الإنتاجي، حدّث `PROBLEMS_AND_SOLUTIONS.md`.
-- `STRATEGY_PIVOT_2026-08-19.md` سجل قرار استراتيجي، وليس سجل حالة يومي. لا تعد كتابته مع كل PR؛ حدّثه فقط عندما يظهر دليل يغير الفرضية نفسها.
-- استخدم `PRODUCT_CONCEPT_<NAME>_<DATE>.md` للمبادرات الكبيرة قيد الدراسة التي سيكون نسيانها مكلفًا، مع تمييز واضح بين الفرضية، الدراسة، والتنفيذ الفعلي.
+## قواعد عامة للذاكرة
 
-## ملاحظة أمنية
+- لا تخلط حالة منتجين في ملف واحد إلا إذا كان الملف نفسه Portfolio-level.
+- حافظ على الفرق بين: hypothesis، market research، decision، implementation state.
+- لا تدّعِ أن شيء منفذ لأن وثيقة رؤية قالت إنه مطلوب.
+- إذا تعارضت الذاكرة مع الكود أو Production، تحقق من الواقع ثم حدّث الذاكرة.
+- لا تنسخ نفس الفقرة عبر عدة ملفات؛ اربط إلى المصدر المرجعي الأفضل.
+- لا تضع أسرارًا أو بيانات عملاء حساسة في الذاكرة.
 
-ممنوع وضع أسرار أو بيانات عملاء أو أرقام هواتف حقيقية أو معرفات حساسة كاملة في Product Memory. يمكن توثيق وجود سر أو متغير باسمه دون قيمته.
+---
+
+## ملفات عامة على مستوى DBL
+
+- [PORTFOLIO_HANDOFF.md](PORTFOLIO_HANDOFF.md) — نقطة دخول عامة لكل المنتجات.
+- [PRODUCT_MEMORY_GOVERNANCE.md](PRODUCT_MEMORY_GOVERNANCE.md) — سياسة إدارة الذاكرة.
+
+أي ملفات أخرى في الجذر يجب أن تكون Portfolio-level أو legacy migration artifacts مؤقتة حتى اكتمال النقل إلى مجلدات المنتجات.
+
+---
+
+## إضافة منتج جديد مستقبلًا
+
+عند اعتماد فكرة جديدة كمنتج أو مبادرة تستحق ذاكرة دائمة:
+
+```text
+products/
+  new-product/
+    README.md
+    AI_HANDOFF.md
+    VISION.md
+    ROADMAP.md
+    DECISIONS.md
+```
+
+ثم أضف المنتج إلى هذا README وإلى `PORTFOLIO_HANDOFF.md`.
+
+الهدف أن يصبح `dbl-product-memory` **ذاكرة Portfolio كاملة لـDBL** وليس ذاكرة مشروع واحد فقط.
